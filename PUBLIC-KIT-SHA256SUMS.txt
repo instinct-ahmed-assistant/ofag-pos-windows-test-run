@@ -1,7 +1,7 @@
-e9d190c72727cfa41a75e0d10fc1a9a83eb12c9a01e83ef19fcd4ade9f7b35bf  ./.github/workflows/trial-l165-native.yml
-88a8ef48aa425c7f92f4cf5ab8480f7d72c2310c244e4a42e92205fcaf299165  ./POS-l165-TRIAL-candidate-win-x64.zip
-49466109dc7d8176ded2249a94d5b2f10f053d511635b6e55a643c8ada681a4f  ./README.md
-0e4c01e5c752beeb45d4e2ec405234d24d86e53ff8c0a22a9cd913edc4fffec4  ./native-run/business-steps.ps1
+50125351df4bf15491bf8e533126b1fca62968486416974bb2df0b554e76e08d  ./.github/workflows/trial-l166-native.yml
+f5ba95df2df65dda0332b25a4f672360bff0c338138a6e4f91349cc3fa8bc189  ./POS-l166-TRIAL-candidate-win-x64.zip
+637376765192c65972e5ed84c0d46f923a03ed9a464ac806c3074bd452a18141  ./README.md
+fcc59c0d1a29890b4f9cad32c5c36affc90244fadd3e3f5b00ab7898e1f7f8ed  ./native-run/business-steps.ps1
 6ed42934ffc19617ac69a9698fea0372bc86fc8ed9ba846075de49190b4ce146  ./native-run/install-smoke.ps1
 5e2f8f82e5ee5ddb8db0ccaf9a52144e2d20922e18e3773635d2294a52b0565b  ./native-run/l116-expect.ps1
 eaf53aa2ae6e80cd73a06db45d53b2b90be391f2a0282a35d029224f1783a053  ./native-run/loyalty-steps.ps1
