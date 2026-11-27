@@ -3,6 +3,7 @@
 # l171 adds: cashier opens a shift, sells the first stock line, checks the refund button, closes the shift; the manager then refunds that sale through the reason dialog.
 # Proves: per-role rail contents, that every page opens without a modal, and layout flags from UIA rectangles (not pixel proof). A person must read the screenshots.
 . (Join-Path $PSScriptRoot 'business-steps.ps1')
+function JnPageSig(){ try{ $tc=New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::Text); $mr=$main.Current.BoundingRectangle; $o=@(); foreach($e in @($main.FindAll($TS::Descendants,$tc))){ try{ $b=$e.Current.BoundingRectangle; if($b.X -lt ($mr.X+$mr.Width*0.62)){ $o+=[string]$e.Current.Name } }catch{} }; return (($o | Select-Object -First 60) -join '|') }catch{ return '' } }
 function JnCreateUser($name,$pw,$roleWord){
   $ok=$false
   try{
@@ -11,10 +12,15 @@ function JnCreateUser($name,$pw,$roleWord){
     if(-not ($nu -and $np -and $ab -and $nr)){ Say "NOTEXECUTED journeys: create-user controls for $name not found"; return $false }
     $nu.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($name)
     [void](BringFg); $np.SetFocus(); Start-Sleep -Milliseconds 400; $tr=TypeSecret $pw { FgOurs } { param($k) [System.Windows.Forms.SendKeys]::SendWait($k) }; Say "DIAG journeys: $name password typed=$($tr.typed)/$($tr.expected)"
-    $ec=$nr.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern); $ec.Expand(); Start-Sleep -Milliseconds 600
-    $li=@($main.FindAll($TS::Descendants,(New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::ListItem)))) | Where-Object { [string]$_.Current.Name -like "*$roleWord*" }
+    $ec=$nr.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern); $ec.Expand(); Start-Sleep -Milliseconds 700
+    # l175: the drop-down list lives in a separate Popup window, so it must be searched in every top-level window of the process (l171: not found under the main window only)
+    $li=@(); foreach($w in @(AllWinsDeep)){ $li+=@($w.FindAll($TS::Descendants,(New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::ListItem))) | Where-Object { [string]$_.Current.Name -like "*$roleWord*" }) }
     $picked=$false; if(@($li).Count -ge 1){ $it=@($li)[0]; try{ $it.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); $picked=$true }catch{ try{ $it.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); $picked=$true }catch{} } }
     try{ $ec.Collapse() }catch{}
+    if(-not $picked){
+      # keyboard fallback: list order is Cashier, Inventory, HR, Manager; the box starts on Cashier
+      $steps=@{ 'Cashier'=0; 'Inventory'=1; 'HR'=2; 'Manager'=3 }[$roleWord]
+      if($null -ne $steps){ try{ $nr.SetFocus(); Start-Sleep -Milliseconds 400; for($k=0;$k -lt $steps;$k++){ [System.Windows.Forms.SendKeys]::SendWait('{DOWN}'); Start-Sleep -Milliseconds 300 }; $picked=$true; Say "DIAG journeys: role [$roleWord] chosen by $steps Down key(s) (popup items found: $(@($li).Count))" }catch{ Say "DIAG journeys: keyboard role pick failed: $($_.Exception.Message)" } } }
     Say "DIAG journeys: role item [$roleWord] picked=$picked; box now shows [$([string]$nr.Current.Name)]"
     if(-not $picked){ Say "NOTEXECUTED journeys: role $roleWord could not be chosen for $name"; return $false }
     $ab.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep 3
@@ -30,7 +36,13 @@ function JnVisit($role,$mustLackAdmin){
   $hasAdmin=@($labels | Where-Object { $_ -match 'الإدارة' }).Count -gt 0
   if($mustLackAdmin){ Check (-not $hasAdmin) "journeys: $role does not see the administration page" } else { Check $hasAdmin "journeys: $role sees the administration page" }
   $n=0; foreach($it in $items){ $n++; $lab=if($it.Label){ $it.Label } else { "item$n" }
-    try{ $it.El.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds 1800 }catch{ Say "INFO journeys: $role page [$lab] select failed: $($_.Exception.Message)"; continue }
+    $sig0=JnPageSig
+    try{ $it.El.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds 1800 }catch{ Say "INFO journeys: $role page [$lab] select failed: $($_.Exception.Message)" }
+    # l175: in l171 the rail item looked selected but the page content never changed (every owner screenshot showed the Access page). Verify the content changed; else focus+Space, then one real click.
+    $sig1=JnPageSig; if($sig1 -eq $sig0 -and $n -gt 1){ Say "DIAG journeys: $role [$lab] page content unchanged after Select; trying focus+Space"; try{ $it.El.SetFocus(); Start-Sleep -Milliseconds 400; [System.Windows.Forms.SendKeys]::SendWait(' '); Start-Sleep -Milliseconds 1800 }catch{}; $sig1=JnPageSig
+      if($sig1 -eq $sig0){ Say "DIAG journeys: $role [$lab] still unchanged; one real click"; try{ if(SafeRailClickOk $it.El "jn-$role-$n"){ $b=$it.El.Current.BoundingRectangle; [void][M.U]::SetCursorPos([int]($b.X+$b.Width/2),[int]($b.Y+$b.Height/2)); Start-Sleep -Milliseconds 300; [M.U]::mouse_event(2,0,0,0,[UIntPtr]::Zero); Start-Sleep -Milliseconds 80; [M.U]::mouse_event(4,0,0,0,[UIntPtr]::Zero); Start-Sleep -Milliseconds 1800 } }catch{ Say "DIAG journeys: click failed: $($_.Exception.Message)" }; $sig1=JnPageSig }
+      Say "DIAG journeys: $role [$lab] page content changed=$($sig1 -ne $sig0)" }
+
     $md=FindModal; if($md){ Say "FAIL journeys: $role page [$lab] raised a dialog [$($md.Current.Name)]"; $script:fails++; Shot "jn-$role-$n-modal"; try{ $md.SetFocus() }catch{}; [System.Windows.Forms.SendKeys]::SendWait('{ENTER}'); Start-Sleep 1; continue }
     Shot ("jn-$role-$n"); LayoutAudit "$role-$lab" $null; Say "INFO journeys: $role visited page [$lab] screenshot jn-$role-$n" }
 }
@@ -61,7 +73,7 @@ function JnCashierFlow(){
   if(NavTo @('المبيعات والورديات','Sales and shifts') 'jn-cashier-reports' 'SalesGrid'){ $rf=ById $main 'RefundButton' 3; $vis=$false; if($rf){ try{ $vis=(-not $rf.Current.IsOffscreen) -and $rf.Current.IsEnabled }catch{} }; Say "DIAG journeys: cashier sees an enabled RefundButton = $vis"; Shot 'jn-cashier-reports-refund'
     if($vis){ Say 'INFO journeys: the refund button is visible to the cashier; Core refuses the action for a cashier (Refund is Owner and Manager only), not clicked here'; $script:notexec++ } else { Check $true 'journeys cashier: the refund button is not offered to a cashier' } }
   if(NavTo @('البيع','Sales') 'jn-cashier-sell2' 'StockGrid'){
-    if(JnSet 'CountedCash' '100'){ if(JnInvoke 'CloseShiftButton'){ Start-Sleep 2; $lm=JnLeftoverModal 'cashier-closeshift'; Shot 'jn-cashier-shift-closed'; Say "DIAG journeys: shift status after close [$(ValTxt 'ShiftStatusLabel')] dialog=$lm"; $mm2=FindModal; Check (-not $mm2) 'journeys cashier: no dialog is left open after closing the shift' } } }
+    if(JnSet 'CountedCash' '100'){ if(JnInvoke 'CloseShiftButton'){ Start-Sleep 1; [void](JnYes 'jn-cashier-closeshift-confirm'); Start-Sleep 2; $lm=JnLeftoverModal 'cashier-closeshift'; Shot 'jn-cashier-shift-closed'; Say "DIAG journeys: shift status after close [$(ValTxt 'ShiftStatusLabel')] dialog=$lm"; $mm2=FindModal; Check (-not $mm2) 'journeys cashier: no dialog is left open after closing the shift' } } }
 }
 # Manager: refund the whole sale made by the cashier (confirm, reason, continue) and read the result.
 function JnManagerRefund(){

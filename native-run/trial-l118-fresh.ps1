@@ -739,7 +739,7 @@ if(Login 'owner' $pwOwner 'owner'){
         Start-Sleep 3; Check (-not (FindModal)) 'item form: saving with a blank barcode gives no error dialog'; Shot '52-item-saved'
         $rows=@(Rows 'ProductGrid'); $hit=$null; foreach($r in $rows){ if($null -eq $r){ continue }; $cn=@(CellNames $r); if(($cn -join '|') -like '*Panadol Extra 48 tab*'){ $hit=$r; Say "DIAG item row cells: $($cn -join ' | ')" } }
         Check ($null -ne $hit) 'item form: the new item appears in the table'
-        if($hit){ $cn=@(CellNames $hit); Check ((($cn -join '|') -match 'L-\d{6}-\d{6}')) 'item form: the barcode column holds an internal code L-yymmdd-hhmmss'
+        if($hit){ $cn=@(CellNames $hit); $stTxt=''; try{ $stTxt=[string](ValTxt 'StatusLabel') }catch{}; Say "DIAG item form: status text [$stTxt] cells=$($cn.Count)"; Check ((($cn -join '|') -match 'L-\d{6}-\d{6}') -or ($stTxt -match 'L-\d{6}-\d{6}')) 'item form: the internal code L-yymmdd-hhmmss is shown (barcode column when visible, else the save status text; with the side panel open the grid hides the barcode column)'
           $sel=$false; try{ $sel=[bool]$hit.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Current.IsSelected }catch{ Say "INFO item row selection pattern: $($_.Exception.Message)" }
           Check $sel 'item form: the new row is selected automatically' }
         $lbl=Pick 'InvSelectedLabel' 3; if($lbl){ Say "DIAG selected-item label: [$($lbl.Current.Name)]" ; Check ($lbl.Current.Name -like '*Panadol Extra 48 tab*') 'item form: the receive panel names the new item' } else { Say 'INFO InvSelectedLabel not found by id (no automation id); see screenshot 52' }

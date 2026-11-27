@@ -3,7 +3,7 @@ function BizOpen($btnId,$title){
   $b=Pick $btnId 5; if(-not $b){ Say "NOTEXECUTED business: $btnId not found"; $script:notexec++; return $null }
   try{ $b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }catch{ Say "FAIL business: invoke $btnId : $($_.Exception.Message)"; $script:fails++; return $null }
   Start-Sleep 2; $w=WinByTitle $title 10
-  if(-not $w){ Say "FAIL business: window [$title] did not open"; $script:fails++; return $null }
+  if(-not $w){ $wn=@(); foreach($x in @(AllWinsDeep)){ try{ $wn+="[$($x.Current.Name)|$($x.Current.ClassName)|$([int]$x.Current.BoundingRectangle.X),$([int]$x.Current.BoundingRectangle.Y),$([int]$x.Current.BoundingRectangle.Width)x$([int]$x.Current.BoundingRectangle.Height)]" }catch{} }; Say "DIAG business: windows now: $($wn -join ' ')"; Shot "dlg-business-$btnId-not-open"; Say "FAIL business: window [$title] did not open"; $script:fails++; return $null }
   return $w
 }
 function BizCloseWin($w,$title){ try{ $w.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() }catch{ Say "INFO business: close failed: $($_.Exception.Message)" }; Check (WinGone $title 8) "business: [$title] closes" }

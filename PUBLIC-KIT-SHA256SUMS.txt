@@ -1,9 +1,9 @@
-88630c845b9bc1289dc2491bfdcf672af5d75aaef2a243868eadda280b826447  ./.github/workflows/trial-l174-native.yml
-7456fc2d313a96517acb65e79165a3c70c6c7c9beae4fe3e81779486cbb1bc40  ./POS-l174-TRIAL-candidate-win-x64.zip
+6ae1bc697748c4e711dd4cc93a75cdd06dc676dcf4eccb22697848a54c1a214b  ./.github/workflows/trial-l175-native.yml
+0aa812bc61a2528396a37075810f253390d20492a3fa06577c9c2bad7618fc5c  ./POS-l175-TRIAL-candidate-win-x64.zip
 edec1715487b544b1946bc5d5de5ad7c2086b3c0ff5946db758b5cab0e5959f7  ./README.md
-c9e510ea99c75d22f137fcfb41de18463b86f730d08953038be9694c36547f4d  ./native-run/business-steps.ps1
+e50694e898af8ebf599af07049fc418c9c9e3eb93b1ee8a1ed956f11ee1eee22  ./native-run/business-steps.ps1
 6ed42934ffc19617ac69a9698fea0372bc86fc8ed9ba846075de49190b4ce146  ./native-run/install-smoke.ps1
-686f140ad090deb43a3c0566831867d5fcf0f754557451348930dd99b797ac9f  ./native-run/journeys-steps.ps1
+9752bb81eac27b640a7ff428267f2dc02e90e016cc0c6e7ae9167c88e992861e  ./native-run/journeys-steps.ps1
 5e2f8f82e5ee5ddb8db0ccaf9a52144e2d20922e18e3773635d2294a52b0565b  ./native-run/l116-expect.ps1
 4889facfc70104c5b003e18be296f75e88b11085e0c5498977dd97981ffaa1b7  ./native-run/loyalty-steps.ps1
 1b7e3b343d84213c952f6842c79e160162fd831414418b2e3164e0da795e3c13  ./native-run/parse-gate.ps1
@@ -13,7 +13,7 @@ b923106492b26d9bf21629afd75990114cd49afd75c4c5510b49f70504d9ec96  ./native-run/p
 e6240526ec65c841b44bc3ff8680c55434a12cddf2708060aa46b905da1e8e53  ./native-run/seedfresh/SeedFresh.exe
 f92e0d736b4e847b170f6f1129ebdde3d36a21f83d9c222c35d4caa39d47cdd1  ./native-run/selfcontained-smoke.ps1
 aa65929f65a3f5c263d7f6f344af062635cced3ee69ed2d0bedde82e7bdba3bd  ./native-run/snap3/DbSnap.exe
-00595fa95ac95c73adb4b331870f061c2340a04e6e65d84a04a236a33c493dcf  ./native-run/trial-l118-fresh.ps1
+eb6b1f2cd21f0bc026043162cb99e4904b4fc2a526260494060bc0394bb7d932  ./native-run/trial-l118-fresh.ps1
 9f5e29f5e8e884e1456ba7959156427483b0131bea3fc09996ffc74910689d00  ./native-run/winalias-prelude.ps1
 6b3b7f8945d2d77fc50226b80acc7260e57cef2af1de52976cc3f454ba69912d  ./native-run/ximp-expect.ps1
 f5ecb5fd1a247813a24f966c5afbd1d22572b9e02eef1a965e11cd4b5d8e8ad6  ./native-run/ximp-fixtures/FIXTURE-SHA256SUMS.txt
