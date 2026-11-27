@@ -3,6 +3,14 @@
 # l171 adds: cashier opens a shift, sells the first stock line, checks the refund button, closes the shift; the manager then refunds that sale through the reason dialog.
 # Proves: per-role rail contents, that every page opens without a modal, and layout flags from UIA rectangles (not pixel proof). A person must read the screenshots.
 . (Join-Path $PSScriptRoot 'business-steps.ps1')
+# l177: close every top-level window of the program except the main one (l176: the "العمليات والنسخ" rail item opens its own Operations window; it stayed open, took the keyboard focus, and the next focus+Space pressed "restore from backup" there, leaving a file dialog). Never sends a key.
+function JnCloseExtras($tag){
+  $n=0; try{ $mh=[int]$main.Current.NativeWindowHandle
+    foreach($w in @(TopWins $p.Id)){ $h=0; try{ $h=[int]$w.Current.NativeWindowHandle }catch{}; if($h -eq $mh -or $h -eq 0){ continue }
+      $nm=''; try{ $nm=[string]$w.Current.Name }catch{}; $cl=''; try{ $cl=[string]$w.Current.ClassName }catch{}
+      try{ $w.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close(); $n++; Say "INFO journeys: $tag closed extra window [$nm] class=[$cl]"; Start-Sleep -Milliseconds 700 }catch{ Say "DIAG journeys: $tag could not close extra window [$nm] class=[$cl]: $($_.Exception.Message)" } }
+  }catch{ Say "DIAG journeys: JnCloseExtras failed: $($_.Exception.Message)" }
+  return $n }
 function JnPageSig(){ try{ $tc=New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::Text); $mr=$main.Current.BoundingRectangle; $o=@(); foreach($e in @($main.FindAll($TS::Descendants,$tc))){ try{ $b=$e.Current.BoundingRectangle; if($b.X -lt ($mr.X+$mr.Width*0.62)){ $o+=[string]$e.Current.Name } }catch{} }; return (($o | Select-Object -First 60) -join '|') }catch{ return '' } }
 function JnCreateUser($name,$pw,$roleWord){
   $ok=$false
@@ -39,12 +47,12 @@ function JnVisit($role,$mustLackAdmin){
     $sig0=JnPageSig
     try{ $it.El.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds 1800 }catch{ Say "INFO journeys: $role page [$lab] select failed: $($_.Exception.Message)" }
     # l175: in l171 the rail item looked selected but the page content never changed (every owner screenshot showed the Access page). Verify the content changed; else focus+Space, then one real click.
-    $sig1=JnPageSig; if($sig1 -eq $sig0 -and $n -gt 1){ Say "DIAG journeys: $role [$lab] page content unchanged after Select; trying focus+Space"; try{ $it.El.SetFocus(); Start-Sleep -Milliseconds 400; [System.Windows.Forms.SendKeys]::SendWait(' '); Start-Sleep -Milliseconds 1800 }catch{}; $sig1=JnPageSig
+    $sig1=JnPageSig; if($sig1 -eq $sig0 -and $n -gt 1){ Say "DIAG journeys: $role [$lab] page content unchanged after Select; trying focus+Space"; [void](JnCloseExtras "jn-$role-$n-before-space"); if(-not (BringFg)){ Say "DIAG journeys: main window is not the foreground; no key is sent" } else { try{ $it.El.SetFocus(); Start-Sleep -Milliseconds 400; [System.Windows.Forms.SendKeys]::SendWait(' '); Start-Sleep -Milliseconds 1800 }catch{} }; $sig1=JnPageSig
       if($sig1 -eq $sig0){ Say "DIAG journeys: $role [$lab] still unchanged; one real click"; try{ if(SafeRailClickOk $it.El "jn-$role-$n"){ $b=$it.El.Current.BoundingRectangle; [void][M.U]::SetCursorPos([int]($b.X+$b.Width/2),[int]($b.Y+$b.Height/2)); Start-Sleep -Milliseconds 300; [M.U]::mouse_event(2,0,0,0,[UIntPtr]::Zero); Start-Sleep -Milliseconds 80; [M.U]::mouse_event(4,0,0,0,[UIntPtr]::Zero); Start-Sleep -Milliseconds 1800 } }catch{ Say "DIAG journeys: click failed: $($_.Exception.Message)" }; $sig1=JnPageSig }
       Say "DIAG journeys: $role [$lab] page content changed=$($sig1 -ne $sig0)" }
 
     $md=FindModal; if($md){ Say "FAIL journeys: $role page [$lab] raised a dialog [$($md.Current.Name)]"; $script:fails++; Shot "jn-$role-$n-modal"; try{ $md.SetFocus() }catch{}; [System.Windows.Forms.SendKeys]::SendWait('{ENTER}'); Start-Sleep 1; continue }
-    Shot ("jn-$role-$n"); LayoutAudit "$role-$lab" $null; Say "INFO journeys: $role visited page [$lab] screenshot jn-$role-$n" }
+    Shot ("jn-$role-$n"); LayoutAudit "$role-$lab" $null; Say "INFO journeys: $role visited page [$lab] screenshot jn-$role-$n"; [void](JnCloseExtras "jn-$role-$n-after-visit") }
 }
 
 function JnSet($id,$v){ $e=Pick $id 4; if(-not $e){ Say "FAIL journeys: control $id not found"; $script:fails++; return $false }; try{ $e.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($v); return $true }catch{ Say "FAIL journeys: set $id : $($_.Exception.Message)"; $script:fails++; return $false } }
