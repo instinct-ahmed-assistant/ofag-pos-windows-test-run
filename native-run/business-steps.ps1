@@ -18,11 +18,12 @@ function BusinessSteps(){
   $w=BizOpen 'BusinessToolsButton' 'أدوات الأعمال'; if(-not $w){ return }
   Check ($true) 'business: the Business tools window opens'; Shot 'biz-1-open'
   $tc=@($w.FindAll($TS::Descendants,(New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::TabItem)))).Count
-  Say "DIAG business: tab count [$tc]"; Check ($tc -eq 10) 'business: ten tabs are present'
-  foreach($t in @('الصلاحية والتخفيض','طلبات الشراء','تتبع التشغيلة','أسعار الموردين','تحويل مخزون','التفاعلات الدوائية','تقارير','مفاتيح سريعة','صحة النسخ الاحتياطي','صلاحيات الأدوار')){
+  Say "DIAG business: tab count [$tc]"; Check ($tc -eq 11) 'business: eleven tabs are present'
+  foreach($t in @('الصلاحية والتخفيض','طلبات الشراء','تتبع التشغيلة','أسعار الموردين','تحويل مخزون','التفاعلات الدوائية','تقارير','مفاتيح سريعة','صحة النسخ الاحتياطي','صلاحيات الأدوار','فحص النظام والبيانات')){
     $ok=BizSelectTab $w $t; Check $ok "business: tab [$t] can be selected"; if($ok){ Shot ('biz-tab-'+($t -replace '\s','_')) } }
   # backup health: the status text must be one of the six statuses, an honest read of the folder
   if(BizSelectTab $w 'صحة النسخ الاحتياطي'){ $st=ById $w 'BtBackupStatus' 3; if($st){ $s=[string]$st.Current.Name; Say "DIAG business: backup health text [$s]"; Check ($s.Length -gt 0) 'business: the backup health tab shows a status' } else { Say 'NOTEXECUTED business: BtBackupStatus not found'; $script:notexec++ } }
+    # system check tab: run it and read the grid is NOT driven in this list (shown only)
   # quick key: set slot 1 to the first product is NOT driven (needs a product pick); the editor is only shown
   Say 'NOTEXECUTED business: quick key set/clear, interaction save, VAT save, transfer note, CSV exports are not driven (they write data or open file dialogs); only the screens are shown'; $script:notexec++
   Shot 'biz-2-after'; BizCloseWin $w 'أدوات الأعمال'

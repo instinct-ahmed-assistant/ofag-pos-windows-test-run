@@ -1,7 +1,7 @@
-5bc7f1a339982a5c3ec456963b5bf7e56b3e16f7abcbe6936e9912ebd8902875  ./.github/workflows/trial-l162-native.yml
-190ff1222ef37c60982983f317fc84487feebea2852220ba6e59462176beaa09  ./POS-l162-TRIAL-candidate-win-x64.zip
-0111717cc3de59e13beda18ac765bf2a48b7fe5391b230d4411c8f6497d03628  ./README.md
-5d5f18e06042af3d473b4beb1f050afe036dda5bc400198e6800dad40f42d2ca  ./native-run/business-steps.ps1
+ef929e08e2c470fec3ed7a6e39283972f9060d98ecb590fd356e647eda625a13  ./.github/workflows/trial-l163-native.yml
+9a710ea8a13a3f8ece31449b2e25c8d304ce8bb837471a60293787ade3756782  ./POS-l163-TRIAL-candidate-win-x64.zip
+5797e43c22631197020f5e1f3ed76633e93926feaed0207f330715f92638567f  ./README.md
+3d41544e277ace5f0878e13727dd39522ab0a1df132c8ad7051e0354f36db6fd  ./native-run/business-steps.ps1
 5e2f8f82e5ee5ddb8db0ccaf9a52144e2d20922e18e3773635d2294a52b0565b  ./native-run/l116-expect.ps1
 eaf53aa2ae6e80cd73a06db45d53b2b90be391f2a0282a35d029224f1783a053  ./native-run/loyalty-steps.ps1
 1b7e3b343d84213c952f6842c79e160162fd831414418b2e3164e0da795e3c13  ./native-run/parse-gate.ps1
