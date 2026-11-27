@@ -12,9 +12,14 @@ function BizSelectTab($w,$text){
   $tabs=@($w.FindAll($TS::Descendants,$c)); foreach($t in $tabs){ if([string]$t.Current.Name -eq $text){ try{ $t.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds 900; return $true }catch{ return $false } } }
   Say "DIAG business: tab [$text] not found among $($tabs.Count) tabs"; return $false
 }
+# NavOpt: navigate WITHOUT the driver's Halt on a missing rail item. Counts the rail items matching the labels first (read only); if there is not exactly one, report NOTEXECUTED and return $false, so one missing optional page cannot stop the rest of the run (run 46013506963 halted every later block after one wrong label).
+function BizNavOpt($labels,$tag,$pageId){
+  try{ $r=@(RailDiag "$tag-pre"); $idx=@(RailMatch @($r | ForEach-Object { $_.Label }) $labels) }catch{ Say "NOTEXECUTED business: rail could not be read for $tag : $($_.Exception.Message)"; $script:notexec++; return $false }
+  if($idx.Count -ne 1){ Say "NOTEXECUTED business: $tag rail item with label in [$($labels -join ',')] found $($idx.Count) (need 1); this step list is skipped, the run continues"; $script:notexec++; return $false }
+  return (NavTo $labels $tag $pageId) }
 function BusinessSteps(){
   Say 'INFO business: optional step list starts (l161)'
-  if(-not (NavTo @('الأصناف والمشتريات','Products & Purchasing') 'biz-inv' 'InvSearchBox')){ Say 'NOTEXECUTED business: could not open the Products page'; $script:notexec++; return }
+  if(-not (BizNavOpt @('الأصناف والمشتريات','Products & Purchasing') 'biz-inv' 'InvSearchBox')){ Say 'NOTEXECUTED business: could not open the Products page'; $script:notexec++; return }
   $w=BizOpen 'BusinessToolsButton' 'أدوات الأعمال'; if(-not $w){ return }
   Check ($true) 'business: the Business tools window opens'; Shot 'biz-1-open'
   $tc=@($w.FindAll($TS::Descendants,(New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::TabItem)))).Count
@@ -27,8 +32,8 @@ function BusinessSteps(){
   # quick key: set slot 1 to the first product is NOT driven (needs a product pick); the editor is only shown
   Say 'NOTEXECUTED business: quick key set/clear, interaction save, VAT save, transfer note, CSV exports are not driven (they write data or open file dialogs); only the screens are shown'; $script:notexec++
   Shot 'biz-2-after'; BizCloseWin $w 'أدوات الأعمال'
-  # sales screen strip: the three buttons and the customer window
-  if(-not (NavTo @('المبيعات','Sales') 'biz-sales' 'SaleCustomerButton')){ Say 'NOTEXECUTED business: could not open the Sales page'; $script:notexec++; return }
+  # sales screen strip (rail label is 'البيع', page element StockGrid; 'المبيعات والورديات' is the Reports page, not this one): the three buttons and the customer window
+  if(-not (BizNavOpt @('البيع','Sales') 'biz-sales' 'StockGrid')){ Say 'NOTEXECUTED business: could not open the Sales page'; $script:notexec++; return }
   foreach($id in @('SaleCustomerButton','QuickKeysButton','ReprintButton')){ $e=Pick $id 4; Check ($e -ne $null) "business: sales strip button $id is present" }
   Shot 'biz-3-sales-strip'
   $cw=BizOpen 'SaleCustomerButton' 'عميل للبيع'

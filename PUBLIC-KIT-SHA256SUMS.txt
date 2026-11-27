@@ -1,7 +1,7 @@
 ef929e08e2c470fec3ed7a6e39283972f9060d98ecb590fd356e647eda625a13  ./.github/workflows/trial-l163-native.yml
 9a710ea8a13a3f8ece31449b2e25c8d304ce8bb837471a60293787ade3756782  ./POS-l163-TRIAL-candidate-win-x64.zip
 5797e43c22631197020f5e1f3ed76633e93926feaed0207f330715f92638567f  ./README.md
-3d41544e277ace5f0878e13727dd39522ab0a1df132c8ad7051e0354f36db6fd  ./native-run/business-steps.ps1
+4a20561dcf9dae7ff8c838d60ac2e021fc52d3e273394ea5e1abd8e2858bed7c  ./native-run/business-steps.ps1
 5e2f8f82e5ee5ddb8db0ccaf9a52144e2d20922e18e3773635d2294a52b0565b  ./native-run/l116-expect.ps1
 eaf53aa2ae6e80cd73a06db45d53b2b90be391f2a0282a35d029224f1783a053  ./native-run/loyalty-steps.ps1
 1b7e3b343d84213c952f6842c79e160162fd831414418b2e3164e0da795e3c13  ./native-run/parse-gate.ps1
@@ -10,7 +10,7 @@ b0ce19f61f38966b112300b3fe6b71d97d899bbbec409128181cbd73f08a0926  ./native-run/s
 8bde48d90d03d367210ccfeb1b05c688ca8e39cf0a0f9ccc517bf0435f7af453  ./native-run/seedfresh/SeedFresh.csproj.txt
 f53ae7ae5ef926f1aadf67c0a9a645af16a490a660848c1b765b54ef7eec27ea  ./native-run/seedfresh/SeedFresh.exe
 aa65929f65a3f5c263d7f6f344af062635cced3ee69ed2d0bedde82e7bdba3bd  ./native-run/snap3/DbSnap.exe
-7828601866595c5043081bb614bdceb931fc9d419b9ac7436152547e0efa2815  ./native-run/trial-l118-fresh.ps1
+459658bf5c715927542fac908bdd523cf9d70cf9bcb17ce9381fe2f6042296e9  ./native-run/trial-l118-fresh.ps1
 9f5e29f5e8e884e1456ba7959156427483b0131bea3fc09996ffc74910689d00  ./native-run/winalias-prelude.ps1
 6b3b7f8945d2d77fc50226b80acc7260e57cef2af1de52976cc3f454ba69912d  ./native-run/ximp-expect.ps1
 f5ecb5fd1a247813a24f966c5afbd1d22572b9e02eef1a965e11cd4b5d8e8ad6  ./native-run/ximp-fixtures/FIXTURE-SHA256SUMS.txt
