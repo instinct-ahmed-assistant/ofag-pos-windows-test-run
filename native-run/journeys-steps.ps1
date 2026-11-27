@@ -5,10 +5,17 @@
 . (Join-Path $PSScriptRoot 'business-steps.ps1')
 # l177: close every top-level window of the program except the main one (l176: the "العمليات والنسخ" rail item opens its own Operations window; it stayed open, took the keyboard focus, and the next focus+Space pressed "restore from backup" there, leaving a file dialog). Never sends a key.
 function JnCloseExtras($tag){
-  $n=0; try{ $mh=[int]$main.Current.NativeWindowHandle
-    foreach($w in @(TopWins $p.Id)){ $h=0; try{ $h=[int]$w.Current.NativeWindowHandle }catch{}; if($h -eq $mh -or $h -eq 0){ continue }
+  # l178: owned (modal) windows are listed by UIA as children of their owner, not of the desktop, so the l177 TopWins loop never saw the Operations window. AllWinsDeep walks both. Logs every window it sees (the proof line).
+  $n=0; try{ $mh=[int]$main.Current.NativeWindowHandle; $names=@()
+    $all=@(AllWinsDeep); foreach($w in $all){ $h=0; try{ $h=[int]$w.Current.NativeWindowHandle }catch{}; $nm=''; try{ $nm=[string]$w.Current.Name }catch{}; $names+=("[$nm|hwnd=$h"+$(if($h -eq $mh){'|MAIN'}else{''})+"]") }
+    Say "INFO journeys: $tag window check: $($all.Count) window(s) $($names -join ' ')"
+    foreach($w in $all){ $h=0; try{ $h=[int]$w.Current.NativeWindowHandle }catch{}; if($h -eq $mh -or $h -eq 0){ continue }
       $nm=''; try{ $nm=[string]$w.Current.Name }catch{}; $cl=''; try{ $cl=[string]$w.Current.ClassName }catch{}
-      try{ $w.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close(); $n++; Say "INFO journeys: $tag closed extra window [$nm] class=[$cl]"; Start-Sleep -Milliseconds 700 }catch{ Say "DIAG journeys: $tag could not close extra window [$nm] class=[$cl]: $($_.Exception.Message)" } }
+      $closed=$false
+      try{ $w.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close(); $closed=$true }catch{ Say "DIAG journeys: $tag WindowPattern.Close failed for [$nm]: $($_.Exception.Message)" }
+      if(-not $closed){ try{ $bc=New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::Button); foreach($bt in @($w.FindAll($TS::Descendants,$bc))){ $bn=[string]$bt.Current.Name; $bi=[string]$bt.Current.AutomationId; if($bn -in @('Close','إغلاق','Cancel','إلغاء') -or $bi -eq 'Close'){ $bt.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); $closed=$true; break } } }catch{ Say "DIAG journeys: $tag close-button fallback failed for [$nm]: $($_.Exception.Message)" } }
+      if($closed){ $n++; Say "INFO journeys: $tag closed extra window [$nm] class=[$cl]"; Start-Sleep -Milliseconds 900 } else { Say "FAIL journeys: $tag could not close extra window [$nm] class=[$cl]"; $script:fails++ } }
+    if($n -gt 0){ $left=@(AllWinsDeep).Count; Say "INFO journeys: $tag windows left after closing: $left (1 expected)" }
   }catch{ Say "DIAG journeys: JnCloseExtras failed: $($_.Exception.Message)" }
   return $n }
 function JnPageSig(){ try{ $tc=New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::Text); $mr=$main.Current.BoundingRectangle; $o=@(); foreach($e in @($main.FindAll($TS::Descendants,$tc))){ try{ $b=$e.Current.BoundingRectangle; if($b.X -lt ($mr.X+$mr.Width*0.62)){ $o+=[string]$e.Current.Name } }catch{} }; return (($o | Select-Object -First 60) -join '|') }catch{ return '' } }
@@ -37,7 +44,7 @@ function JnCreateUser($name,$pw,$roleWord){
   }catch{ Say "FAIL journeys: create $name : $($_.Exception.Message)"; $script:fails++ }
   return $ok }
 function JnVisit($role,$mustLackAdmin){
-  Start-Sleep 2; Shot "jn-$role-landing"; LayoutAudit "$role-landing" $null
+  Start-Sleep 2; [void](JnCloseExtras "jn-$role-start"); [void](BringFg); Shot "jn-$role-landing"; LayoutAudit "$role-landing" $null
   $items=@(); for($i=1;$i -le 5;$i++){ $items=@(RailItems); if($items.Count -gt 0){ break }; Start-Sleep 2 }
   $labels=@($items | ForEach-Object { if($_.Label){ $_.Label } else { $_.Raw } }); Say "INFO journeys: $role rail ($($labels.Count)): $($labels -join ' | ')"
   Check ($labels.Count -ge 1) "journeys: $role sees at least one page on the rail"

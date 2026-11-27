@@ -1,9 +1,9 @@
-e3683733bd1514aeb0511a9308076a3a241cb4189fe81b2724bc357a837c5896  ./.github/workflows/trial-l177-native.yml
-25aa359ca817f6c64a2bea1df2cc3a130bd147e0d2ca6fe580041581933f2db4  ./POS-l177-TRIAL-candidate-win-x64.zip
+7abd83166f16b0f777a55a1487cc6efb0e42c621c403b38a5e932c51489a4806  ./.github/workflows/trial-l178-native.yml
+3e51b8aaccabc236ae576ab9b0a78e1a1a2fd56eec9fc4a239f5e29a1f604aa2  ./POS-l178-TRIAL-candidate-win-x64.zip
 edec1715487b544b1946bc5d5de5ad7c2086b3c0ff5946db758b5cab0e5959f7  ./README.md
 e50694e898af8ebf599af07049fc418c9c9e3eb93b1ee8a1ed956f11ee1eee22  ./native-run/business-steps.ps1
 6ed42934ffc19617ac69a9698fea0372bc86fc8ed9ba846075de49190b4ce146  ./native-run/install-smoke.ps1
-9bcb85017e06224ef72ce7bd9c559ddc362d0f6247a4ce914219bb70cb1193fd  ./native-run/journeys-steps.ps1
+a917e6bc5c01c9e0905ac37447e9a8e8646b20da8ed30835c6ae66ce1ded970a  ./native-run/journeys-steps.ps1
 5e2f8f82e5ee5ddb8db0ccaf9a52144e2d20922e18e3773635d2294a52b0565b  ./native-run/l116-expect.ps1
 4889facfc70104c5b003e18be296f75e88b11085e0c5498977dd97981ffaa1b7  ./native-run/loyalty-steps.ps1
 1b7e3b343d84213c952f6842c79e160162fd831414418b2e3164e0da795e3c13  ./native-run/parse-gate.ps1
