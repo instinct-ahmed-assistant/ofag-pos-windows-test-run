@@ -8,5 +8,5 @@ const pt=await c.subtle.decrypt({name:'AES-GCM',iv:Buffer.from(f.n.stringValue,'
 const out=Buffer.from(pt).toString('utf8');const j=JSON.parse(out);
 const keys=Object.keys(j).sort().join(',');
 console.log('NODE DECRYPT OK keys='+keys+' asOf='+j.asOf+' shift='+j.shift+' sales='+JSON.stringify(j.sales)+' low='+j.low.length+' expiring='+j.expiring.length);
-if(keys!=='asOf,expiring,low,sales,shift'){console.log('FAIL unexpected fields');process.exit(1)}
+if(keys!=='asOf,branch,expiring,low,payments,sales,shift,shifts,top'){console.log('FAIL unexpected fields');process.exit(1)}
 console.log('SAMPLE '+out.slice(0,300));
