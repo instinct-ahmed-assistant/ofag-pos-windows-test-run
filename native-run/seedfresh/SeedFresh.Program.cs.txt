@@ -1,0 +1,39 @@
+using Pharmacy.Core;
+using System.Data;
+using System.Globalization;
+// SYNTHETIC stock-rate seed (TRIAL data only). Built against the frozen r105 Core source (r108 Core is byte-identical). Writes the TRIAL database BEFORE the app starts: owner, new-layout switch ON, 7 products with stock and backdated sales.
+// All dates are relative to THIS machine's local day (the day the app calls "today") and to the machine zone rules at each instant (the app sets PharmacyDb.LocalZone=TimeZoneInfo.Local, so Core ignores the single offset the window passes). Every seeded fact is printed on a SEEDSR line.
+// Passwords come from env POS_SEED_OWNER_PW and are never printed.
+try{
+var local=Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);var path=TrialData.DbPath(local);
+if(File.Exists(path)){Console.WriteLine("SEEDFAIL a trial database already exists");Environment.Exit(3);}
+var pw=Environment.GetEnvironmentVariable("POS_SEED_OWNER_PW");if(string.IsNullOrEmpty(pw)){Console.WriteLine("SEEDFAIL password env missing");Environment.Exit(3);}
+var db=TrialData.Open(local);db.SetupOwner("owner",pw);var s=db.Login("owner",pw);db.OpenShift(s,1000);
+var today=DateOnly.FromDateTime(DateTime.Now);int off=(int)TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).TotalMinutes;
+Console.WriteLine($"SEEDSR clock={today:yyyy-MM-dd} tz={TimeZoneInfo.Local.Id} offsetMinutes={off}");
+void Sql(string sql,params (string,object)[] p){using var cn=new Microsoft.Data.Sqlite.SqliteConnection("Data Source="+db.DbPath);cn.Open();using var cm=cn.CreateCommand();cm.CommandText=sql;foreach(var (k,v) in p)cm.Parameters.AddWithValue(k,v);cm.ExecuteNonQuery();}
+string Scalar(string sql){using var cn=new Microsoft.Data.Sqlite.SqliteConnection("Data Source="+db.DbPath);cn.Open();using var cm=cn.CreateCommand();cm.CommandText=sql;return Convert.ToString(cm.ExecuteScalar())!;}
+// UTC instant for a LOCAL day and clock time using the machine zone rules AT THAT INSTANT (what the app does: PharmacyDb.LocalZone=TimeZoneInfo.Local). SR_SEED_SINGLE_OFFSET=1 reproduces the r108 run-1 seeding (one current offset for every day), kept only to reproduce the discrepancy.
+string Utc(DateOnly day,int hh,int mm){var l=new DateTime(day.Year,day.Month,day.Day,hh,mm,0,DateTimeKind.Unspecified);if(Environment.GetEnvironmentVariable("SR_SEED_SINGLE_OFFSET")=="1"){var u0=l.AddMinutes(-off);return u0.ToString("yyyy-MM-dd'T'HH:mm:ss.fffffff",CultureInfo.InvariantCulture)+"+00:00";}var u=TimeZoneInfo.ConvertTimeToUtc(l,TimeZoneInfo.Local);return u.ToString("yyyy-MM-dd'T'HH:mm:ss.fffffff",CultureInfo.InvariantCulture)+"+00:00";}
+// name, barcode, receive units, cost minor, stocked local day offset (days before today), sales (units, days before today, hh, mm)
+var plan=new (string name,string bc,long units,long cost,int stockedAgo,(long u,int ago,int hh,int mm)[] sales)[]{
+ ("Synthetic Fast A","SR-FAST",70,400,400,new[]{(20L,10,12,0),(40L,45,12,0)}),
+ ("Synthetic Slow B","SR-SLOW",32,300,400,new[]{(12L,50,12,0)}),
+ ("Synthetic Out C","SR-OUT",5,250,400,new[]{(5L,3,12,0)}),
+ ("Synthetic NoSale D","SR-NOSALE",15,200,400,new (long,int,int,int)[0]),
+ ("Synthetic FixedMin E","SR-FIXMIN",106,150,400,new[]{(6L,20,12,0)}),
+ ("Synthetic New F","SR-NEW",23,100,9,new[]{(18L,2,12,0)}),
+ ("Synthetic Edge G","SR-EDGE",57,120,400,new[]{(4L,59,0,30),(3L,60,23,30)})};
+foreach(var p in plan)db.AddProduct(s,p.name,p.bc,"box",1500);
+var pid=db.Products(s).Rows.Cast<DataRow>().ToDictionary(r=>(string)r["Barcode"],r=>(string)r["Id"]);
+foreach(var p in plan){db.Receive(s,pid[p.bc],"L-"+p.bc,today.AddDays(1000),p.units,p.cost,"Synthetic Supplier");}
+foreach(var p in plan){var b=Scalar($"SELECT id FROM batches WHERE product='{pid[p.bc]}' ORDER BY rowid LIMIT 1");Sql("UPDATE movements SET created=$t WHERE batch=$b",("$t",Utc(today.AddDays(-p.stockedAgo),8,0)),("$b",b));}
+int n=0;
+foreach(var p in plan){var b=Scalar($"SELECT id FROM batches WHERE product='{pid[p.bc]}' ORDER BY rowid LIMIT 1");
+ foreach(var sl in p.sales){var op="sr-op-"+(++n);db.Sell(s,op,[new CartLine(b,sl.u)]);var when=Utc(today.AddDays(-sl.ago),sl.hh,sl.mm);Sql("UPDATE sales SET created=$t WHERE id=$i",("$t",when),("$i",op));Sql("UPDATE movements SET created=$t WHERE reference=$i",("$t",when),("$i",op));
+  Console.WriteLine($"SEEDSR sale barcode={p.bc} units={sl.u} localDay={today.AddDays(-sl.ago):yyyy-MM-dd} localTime={sl.hh:00}:{sl.mm:00} utc={when} zoneOffsetThatDay={(int)TimeZoneInfo.Local.GetUtcOffset(new DateTime(today.AddDays(-sl.ago).Year,today.AddDays(-sl.ago).Month,today.AddDays(-sl.ago).Day,sl.hh,sl.mm,0)).TotalMinutes}");}}
+db.SetReorderLevel(s,pid["SR-FIXMIN"],500,900);
+foreach(var p in plan){var left=Scalar($"SELECT COALESCE(SUM(qty),0) FROM batches WHERE product='{pid[p.bc]}'");Console.WriteLine($"SEEDSR product barcode={p.bc} name={p.name} received={p.units} cost={p.cost} stockedLocalDay={today.AddDays(-p.stockedAgo):yyyy-MM-dd} usable={left}");}
+Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();Console.WriteLine("seeded synthetic stock-rate trial database (fresh default layout)");
+
+}catch(Exception ex){Console.WriteLine("SEEDFAIL exception: "+ex);Environment.Exit(4);}

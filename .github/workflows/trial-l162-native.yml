@@ -1,0 +1,52 @@
+name: "POS l162 native Windows probe (manual run, synthetic data only)"
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  flow:
+    runs-on: windows-2022
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pre-flight (fails fast before any app launch)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          if(-not $IsWindows){ throw 'not a Windows runner' }
+          $zip='./POS-l162-TRIAL-candidate-win-x64.zip'
+          $pinZip='190ff1222ef37c60982983f317fc84487feebea2852220ba6e59462176beaa09'
+          $got=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          if($got -ne $pinZip){ throw "zip sha256 mismatch: got $got expected $pinZip" }
+          "PASS zip sha256 matches the pin ($got)"
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $z=[System.IO.Compression.ZipFile]::OpenRead((Resolve-Path $zip).Path); $names=@($z.Entries|ForEach-Object{$_.FullName}); $z.Dispose()
+          if($names.Count -ne 1 -or $names[0] -ne 'OneForAllGood.Pharmacy.TRIAL.exe'){ throw "unexpected zip content: $($names -join ',')" }
+          "PASS zip holds exactly the TRIAL exe"
+          Get-ChildItem ./native-run -Recurse -File | ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(),$_.FullName.Substring($PWD.Path.Length+1) } | Sort-Object | Set-Content "$env:RUNNER_TEMP/native-run-sums.txt"
+          "INFO native-run files: $((Get-Content "$env:RUNNER_TEMP/native-run-sums.txt").Count) (sums recorded)"
+      - name: Parse gate (blocking, before any app launch)
+        shell: pwsh
+        run: ./native-run/parse-gate.ps1 -Files ./native-run/trial-l118-fresh.ps1,./native-run/ximp-expect.ps1,./native-run/l116-expect.ps1,./native-run/parse-gate.ps1,./native-run/loyalty-steps.ps1,./native-run/business-steps.ps1
+      - name: 'Fresh default database, first owner login, screenshots of the default layout and every rail page'
+        shell: pwsh
+        timeout-minutes: 34
+        env:
+          OFAG_LOYALTY: '1'
+          OFAG_BUSINESS: '1'
+        run: ./native-run/trial-l118-fresh.ps1 -Zip ./POS-l162-TRIAL-candidate-win-x64.zip -OutDir (Join-Path $env:RUNNER_TEMP 'evidence') -ExpectZipSha 190ff1222ef37c60982983f317fc84487feebea2852220ba6e59462176beaa09 -ExpectExeSha 7d399a96005e2a8e71dd0b59c3b02a1b0cc7b9ff3b74bd5cca2a5de414aadbb8 -SeedExe ./native-run/seedfresh/SeedFresh.exe -ExpectSeedSha f53ae7ae5ef926f1aadf67c0a9a645af16a490a660848c1b765b54ef7eec27ea -SnapExe ./native-run/snap3/DbSnap.exe -ExpectSnapSha aa65929f65a3f5c263d7f6f344af062635cced3ee69ed2d0bedde82e7bdba3bd -FixDir ./native-run/ximp-fixtures
+      - name: 'Phone monitor: decrypt the document fetched back from the server with Node (independent implementation)'
+        if: always()
+        shell: pwsh
+        run: |
+          $ev=Join-Path $env:RUNNER_TEMP 'evidence'
+          if((Test-Path "$ev/phone-code.txt") -and (Test-Path "$ev/phone-doc-1.json")){
+            node ./native-run/phone-decrypt.mjs "$ev/phone-code.txt" "$ev/phone-doc-1.json" 2>&1 | Tee-Object -FilePath "$ev/phone-node-decrypt.txt"
+            if($LASTEXITCODE -ne 0){ throw 'node decrypt failed' }
+          } else { 'NOTEXECUTED node decrypt: the app step produced no code or document' | Tee-Object -FilePath "$ev/phone-node-decrypt.txt"; throw 'no document to decrypt' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pos-l118-fresh-evidence
+          path: ${{ runner.temp }}/evidence
+          retention-days: 1
+          if-no-files-found: warn
