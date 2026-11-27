@@ -1,5 +1,5 @@
-7abd83166f16b0f777a55a1487cc6efb0e42c621c403b38a5e932c51489a4806  ./.github/workflows/trial-l178-native.yml
-3e51b8aaccabc236ae576ab9b0a78e1a1a2fd56eec9fc4a239f5e29a1f604aa2  ./POS-l178-TRIAL-candidate-win-x64.zip
+2c0ba81748f204e096bf83e694c38ddb0f8d61c8ffd37866f4b50fa36476f272  ./.github/workflows/trial-l179-native.yml
+3e51b8aaccabc236ae576ab9b0a78e1a1a2fd56eec9fc4a239f5e29a1f604aa2  ./POS-l179-TRIAL-candidate-win-x64.zip
 edec1715487b544b1946bc5d5de5ad7c2086b3c0ff5946db758b5cab0e5959f7  ./README.md
 e50694e898af8ebf599af07049fc418c9c9e3eb93b1ee8a1ed956f11ee1eee22  ./native-run/business-steps.ps1
 6ed42934ffc19617ac69a9698fea0372bc86fc8ed9ba846075de49190b4ce146  ./native-run/install-smoke.ps1
@@ -36,3 +36,4 @@ fa701df6bc70cba0b431b2b6b8fc22e590f622327884c9bfd1cc837692edc295  ./native-run/x
 3127a4fe9dc2c9d0b6a64af3071eb957924199e5613a0843ae4ebaa33277765e  ./native-run/ximp-fixtures/h7-sales-price-mismatch.xlsx
 489c6ec9fe71e2b72ee796eeb2846103e95aa4c56e1965bb8862e186876ed91c  ./native-run/ximp-fixtures/h8-sales-second-invoice-exceeds-stock.xlsx
 7eb1bb25ec01c7943156449520cc714eed0b5219fc9862e9ad2d8cdbe5031a61  ./native-run/ximp-fixtures/h9-sales-refunded-row.xlsx
+c364522704cd0632197b5eade80c74106dbf0199afb206ebb8cdb49ddefcd426  ./tools/check_pins.py
