@@ -1,4 +1,4 @@
-name: "POS l163 native Windows probe (manual run, synthetic data only)"
+name: "POS l165 native Windows probe (manual run, synthetic data only)"
 on: workflow_dispatch
 permissions:
   contents: read
@@ -13,8 +13,8 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           if(-not $IsWindows){ throw 'not a Windows runner' }
-          $zip='./POS-l163-TRIAL-candidate-win-x64.zip'
-          $pinZip='9a710ea8a13a3f8ece31449b2e25c8d304ce8bb837471a60293787ade3756782'
+          $zip='./POS-l165-TRIAL-candidate-win-x64.zip'
+          $pinZip='88a8ef48aa425c7f92f4cf5ab8480f7d72c2310c244e4a42e92205fcaf299165'
           $got=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
           if($got -ne $pinZip){ throw "zip sha256 mismatch: got $got expected $pinZip" }
           "PASS zip sha256 matches the pin ($got)"
@@ -33,7 +33,7 @@ jobs:
         env:
           OFAG_LOYALTY: '1'
           OFAG_BUSINESS: '1'
-        run: ./native-run/trial-l118-fresh.ps1 -Zip ./POS-l163-TRIAL-candidate-win-x64.zip -OutDir (Join-Path $env:RUNNER_TEMP 'evidence') -ExpectZipSha 9a710ea8a13a3f8ece31449b2e25c8d304ce8bb837471a60293787ade3756782 -ExpectExeSha 2e6483d5f2b2381bbb75c6ec65b7ffd29f2b673138c5f79990a54cfe5eecfde3 -SeedExe ./native-run/seedfresh/SeedFresh.exe -ExpectSeedSha f53ae7ae5ef926f1aadf67c0a9a645af16a490a660848c1b765b54ef7eec27ea -SnapExe ./native-run/snap3/DbSnap.exe -ExpectSnapSha aa65929f65a3f5c263d7f6f344af062635cced3ee69ed2d0bedde82e7bdba3bd -FixDir ./native-run/ximp-fixtures
+        run: ./native-run/trial-l118-fresh.ps1 -Zip ./POS-l165-TRIAL-candidate-win-x64.zip -OutDir (Join-Path $env:RUNNER_TEMP 'evidence') -ExpectZipSha 88a8ef48aa425c7f92f4cf5ab8480f7d72c2310c244e4a42e92205fcaf299165 -ExpectExeSha 6108c47f8350eec80f428d07910eb2c433fbc1f74bde4ffe9dbe1f6bce5b1b21 -SeedExe ./native-run/seedfresh/SeedFresh.exe -ExpectSeedSha e6240526ec65c841b44bc3ff8680c55434a12cddf2708060aa46b905da1e8e53 -SnapExe ./native-run/snap3/DbSnap.exe -ExpectSnapSha aa65929f65a3f5c263d7f6f344af062635cced3ee69ed2d0bedde82e7bdba3bd -FixDir ./native-run/ximp-fixtures
       - name: 'Phone monitor: decrypt the document fetched back from the server with Node (independent implementation)'
         if: always()
         shell: pwsh

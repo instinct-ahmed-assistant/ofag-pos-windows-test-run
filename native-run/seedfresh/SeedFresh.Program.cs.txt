@@ -33,6 +33,7 @@ foreach(var p in plan){var b=Scalar($"SELECT id FROM batches WHERE product='{pid
  foreach(var sl in p.sales){var op="sr-op-"+(++n);db.Sell(s,op,[new CartLine(b,sl.u)]);var when=Utc(today.AddDays(-sl.ago),sl.hh,sl.mm);Sql("UPDATE sales SET created=$t WHERE id=$i",("$t",when),("$i",op));Sql("UPDATE movements SET created=$t WHERE reference=$i",("$t",when),("$i",op));
   Console.WriteLine($"SEEDSR sale barcode={p.bc} units={sl.u} localDay={today.AddDays(-sl.ago):yyyy-MM-dd} localTime={sl.hh:00}:{sl.mm:00} utc={when} zoneOffsetThatDay={(int)TimeZoneInfo.Local.GetUtcOffset(new DateTime(today.AddDays(-sl.ago).Year,today.AddDays(-sl.ago).Month,today.AddDays(-sl.ago).Day,sl.hh,sl.mm,0)).TotalMinutes}");}}
 db.SetReorderLevel(s,pid["SR-FIXMIN"],500,900);
+db.AddCustomer(s,"Synthetic Customer","01000000001",100000);Console.WriteLine("SEEDSR customer name=Synthetic Customer");
 foreach(var p in plan){var left=Scalar($"SELECT COALESCE(SUM(qty),0) FROM batches WHERE product='{pid[p.bc]}'");Console.WriteLine($"SEEDSR product barcode={p.bc} name={p.name} received={p.units} cost={p.cost} stockedLocalDay={today.AddDays(-p.stockedAgo):yyyy-MM-dd} usable={left}");}
 Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();Console.WriteLine("seeded synthetic stock-rate trial database (fresh default layout)");
 

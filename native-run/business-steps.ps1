@@ -23,9 +23,10 @@ function BusinessSteps(){
   $w=BizOpen 'BusinessToolsButton' 'أدوات الأعمال'; if(-not $w){ return }
   Check ($true) 'business: the Business tools window opens'; Shot 'biz-1-open'
   $tc=@($w.FindAll($TS::Descendants,(New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::TabItem)))).Count
-  Say "DIAG business: tab count [$tc]"; Check ($tc -eq 11) 'business: eleven tabs are present'
-  foreach($t in @('الصلاحية والتخفيض','طلبات الشراء','تتبع التشغيلة','أسعار الموردين','تحويل مخزون','التفاعلات الدوائية','تقارير','مفاتيح سريعة','صحة النسخ الاحتياطي','صلاحيات الأدوار','فحص النظام والبيانات')){
+  Say "DIAG business: tab count [$tc]"; Check ($tc -eq 12) 'business: twelve tabs are present'
+  foreach($t in @('الصلاحية والتخفيض','طلبات الشراء','تتبع التشغيلة','أسعار الموردين','تحويل مخزون','التفاعلات الدوائية','تقارير','مفاتيح سريعة','صحة النسخ الاحتياطي','صلاحيات الأدوار','فحص النظام والبيانات','تقارير المشتريات والمخزون')){
     $ok=BizSelectTab $w $t; Check $ok "business: tab [$t] can be selected"; if($ok){ Shot ('biz-tab-'+($t -replace '\s','_')) } }
+  if(BizSelectTab $w 'صلاحيات الأدوار'){ foreach($rid in @('BtRoleSelect','BtRoleTemplate','BtRoleAreas')){ $re=ById $w $rid 3; Check ($re -ne $null) "business: roles editor control $rid is present" } }
   # backup health: the status text must be one of the six statuses, an honest read of the folder
   if(BizSelectTab $w 'صحة النسخ الاحتياطي'){ $st=ById $w 'BtBackupStatus' 3; if($st){ $s=[string]$st.Current.Name; Say "DIAG business: backup health text [$s]"; Check ($s.Length -gt 0) 'business: the backup health tab shows a status' } else { Say 'NOTEXECUTED business: BtBackupStatus not found'; $script:notexec++ } }
     # system check tab: run it and read the grid is NOT driven in this list (shown only)
