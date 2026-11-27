@@ -1,4 +1,4 @@
-# POS l166 native Windows probe
+# POS l169 native Windows probe
 
 Manual workflow only (workflow_dispatch). Runs the TRIAL build of a pharmacy POS on a GitHub-hosted Windows runner against a synthetic database it creates itself. No customer data, no secrets, no payment. Screenshots and logs are uploaded as a one-day artifact.
 

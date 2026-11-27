@@ -51,10 +51,16 @@ function BusinessSteps(){
   $w=BizOpen 'BusinessToolsButton' 'أدوات الأعمال'; if(-not $w){ return }
   Check ($true) 'business: the Business tools window opens'; Shot 'biz-1-open'; LayoutAudit 'business-tools' $w
   $tc=@($w.FindAll($TS::Descendants,(New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::TabItem)))).Count
-  Say "DIAG business: tab count [$tc]"; Check ($tc -eq 12) 'business: twelve tabs are present'
-  foreach($t in @('الصلاحية والتخفيض','طلبات الشراء','تتبع التشغيلة','أسعار الموردين','تحويل مخزون','التفاعلات الدوائية','تقارير','مفاتيح سريعة','صحة النسخ الاحتياطي','صلاحيات الأدوار','فحص النظام والبيانات','تقارير المشتريات والمخزون')){
+  Say "DIAG business: tab count [$tc]"; Check ($tc -eq 13) 'business: thirteen tabs are present'
+  foreach($t in @('الصلاحية والتخفيض','طلبات الشراء','تتبع التشغيلة','أسعار الموردين','تحويل مخزون','التفاعلات الدوائية','تقارير','مفاتيح سريعة','صحة النسخ الاحتياطي','صلاحيات الأدوار','فحص النظام والبيانات','تقارير المشتريات والمخزون','ساعات العمل')){
     $ok=BizSelectTab $w $t; Check $ok "business: tab [$t] can be selected"; if($ok){ Shot ('biz-tab-'+($t -replace '\s','_')) } }
-  if(BizSelectTab $w 'صلاحيات الأدوار'){ foreach($rid in @('BtRoleSelect','BtRoleTemplate','BtRoleAreas')){ $re=ById $w $rid 3; Check ($re -ne $null) "business: roles editor control $rid is present" } }
+  if(BizSelectTab $w 'صلاحيات الأدوار'){ foreach($rid in @('BtRoleSelect','BtRoleTemplate','BtRoleMode_sales')){ $re=ById $w $rid 3; Check ($re -ne $null) "business: roles editor control $rid is present"; if($re){ $vt=''; try{ $vt=[string]$re.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value }catch{ $vt=[string]$re.Current.Name }; Say "DIAG business: roles editor $rid shows [$vt]"; Check (-not ($vt -like '*DataRowView*')) "business: roles editor $rid does not show a raw type name" } } }
+  # opening hours tab (l168): edit Monday, save, read it back, restore
+  if(BizSelectTab $w 'ساعات العمل'){ $o1=ById $w 'BtHoursOpen_1' 3; $sv1=ById $w 'BtHoursSave_1' 3; $cl1=ById $w 'BtHoursClose_1' 3
+    if($o1 -and $sv1 -and $cl1){ try{ $vp=[System.Windows.Automation.ValuePattern]::Pattern; $d0=[string]$o1.GetCurrentPattern($vp).Current.Value; Say "DIAG business: hours Monday open shows [$d0]"; Check ($d0 -eq '09:00') 'business: opening hours default Monday open is 09:00'
+        $o1.GetCurrentPattern($vp).SetValue('10:30'); $sv1.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 700
+        [void](BizSelectTab $w 'صلاحيات الأدوار'); [void](BizSelectTab $w 'ساعات العمل'); Start-Sleep -Milliseconds 500; $o1b=ById $w 'BtHoursOpen_1' 3; $d1=[string]$o1b.GetCurrentPattern($vp).Current.Value; Say "DIAG business: hours Monday open after save and reopen [$d1]"; Check ($d1 -eq '10:30') 'business: an edited opening time is saved and shown again'
+        $o1b.GetCurrentPattern($vp).SetValue('09:00'); (ById $w 'BtHoursSave_1' 3).GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 500 }catch{ Say "FAIL business: hours step: $($_.Exception.Message)"; $script:fails++ } } else { Say 'NOTEXECUTED business: opening hours controls not found'; $script:notexec++ } }
   # backup health: the status text must be one of the six statuses, an honest read of the folder
   if(BizSelectTab $w 'صحة النسخ الاحتياطي'){ $st=ById $w 'BtBackupStatus' 3; if($st){ $s=[string]$st.Current.Name; Say "DIAG business: backup health text [$s]"; Check ($s.Length -gt 0) 'business: the backup health tab shows a status' } else { Say 'NOTEXECUTED business: BtBackupStatus not found'; $script:notexec++ } }
     # system check tab: run it and read the grid is NOT driven in this list (shown only)

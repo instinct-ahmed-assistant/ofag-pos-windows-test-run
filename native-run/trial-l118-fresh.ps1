@@ -654,6 +654,7 @@ if(Login 'owner' $pwOwner 'owner'){
       Say 'PASS design: toggle present, sale screen and pages opened in dark and light (read the d* screenshots)'
     }
   }catch{ Say "FAIL design block: $($_.Exception.Message) (script line $($_.InvocationInfo.ScriptLineNumber): $(([string]$_.InvocationInfo.Line).Trim()))"; $script:fails++ }
+  $script:halt=$false; [void](NavTo @('الإدارة والنسخ الاحتياطي','Administration and backup') 'newui-check-admin' 'NewUiBox'); $script:halt=$false
   $cb=Pick 'NewUiBox' 4; if($cb){ $st='?'; try{ $st=$cb.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern).Current.ToggleState }catch{}; Say "DIAG NewUiBox toggle state=$st"; Check ("$st" -eq 'On') 'settings: the new-layout checkbox is ticked by default' } else { Say 'NOTEXECUTED NewUiBox not found'; $script:notexec++ }
 
   # ---- WhatsApp button: set a SYNTHETIC number from settings, button appears, click opens the link, clear -> hidden ----
@@ -1145,6 +1146,7 @@ if(Login 'owner' $pwOwner 'owner'){
       }
     } else { Say 'NOTEXECUTED roles: could not open the administration page' }
   }catch{ Say "FAIL roles block: $($_.Exception.Message) (script line $($_.InvocationInfo.ScriptLineNumber): $(([string]$_.InvocationInfo.Line).Trim()))"; $script:fails++ }
+  if($env:OFAG_JOURNEYS -eq '1'){ try{ $jp=Join-Path $PSScriptRoot 'journeys-steps.ps1'; if(Test-Path $jp){ . $jp; JourneySteps } else { Say 'NOTEXECUTED journeys: journeys-steps.ps1 not found'; $script:notexec++ } }catch{ Say "FAIL journeys steps: $($_.Exception.Message) (script line $($_.InvocationInfo.ScriptLineNumber))"; $script:fails++ } }
   # ---- l134: invoice photo OCR on a real image (Windows OCR en-US, same path and reader as the draft receive screen). The image is drawn here with SYNTHETIC text; no real invoice. ----
   # What this proves: the engine on this runner reads printed English digits and words from pixels and the reader turns them into rows. It does NOT prove Arabic, handwriting, photos taken with a phone, skew, or the draft screen's file dialog.
   try{
