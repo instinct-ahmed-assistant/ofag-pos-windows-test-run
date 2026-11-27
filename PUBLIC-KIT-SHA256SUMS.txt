@@ -1,5 +1,5 @@
-9a0f9f205df686fd78167ceaa4e416f5387f8c1dfed116de167a514936048021  ./.github/workflows/trial-l186-native.yml
-1e6df6af705b0956aa84fc0ddb7b481e7fd08fc8732fdc4bdec404b4a77c3b37  ./POS-l186-TRIAL-candidate-win-x64.zip
+0b5cdeaa3e40e1f20fb9c92852872f132cda861d0325b1e4d51240f2f4392405  ./.github/workflows/trial-l187-native.yml
+90fa105c60a4c9dddf10af72d5647de50240999878e18fb7f306f7d2e1da1bf5  ./POS-l187-TRIAL-candidate-win-x64.zip
 edec1715487b544b1946bc5d5de5ad7c2086b3c0ff5946db758b5cab0e5959f7  ./README.md
 da884b3aa9a32ec1516e8edce84a17cf2f2e5d831b08e90152747530f1cf11ad  ./native-run/business-steps.ps1
 6ed42934ffc19617ac69a9698fea0372bc86fc8ed9ba846075de49190b4ce146  ./native-run/install-smoke.ps1
