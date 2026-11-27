@@ -79,7 +79,20 @@ function ScrollSearch($id,$why){
     Say "DIAG ScrollSearch ${id}: not found after all containers and percents"
   }catch{ Say "INFO ScrollSearch $id failed (script line $($_.InvocationInfo.ScriptLineNumber)): $($_.Exception.Message)" }
   return $null }
-function Pick($id,$sec){ $e=ById $main $id $sec; if(-not $e){ if(ReLogin "Pick $id"){ $e=ById $main $id 3 } }; if(-not $e){ ReanchorMain "Pick $id"; $e=ById $main $id 1 }; if(-not $e){ $e=ScrollSearch $id 'Pick' }; return $e }
+# l164: Pick fallback. Controls inside the collapsed InvMoreExpander (header: المزيد من الإجراءات) or the collapsed InvSidePanel are absent from UIA (first real l162 run: ItemCardButton, LoyaltyButton, BusinessToolsButton, PriceTiersButton, DraftReceiveButton not found). Pick expands the expander and, if still not found, opens the side panel, once, then looks again. Quiet: no Halt or FAIL here; the caller reports a miss.
+function ExpandMoreQuiet($id){
+  try{
+    $x=ById $main 'InvMoreExpander' 1
+    if($x){ $ec=$x.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern); $st=[string]$ec.Current.ExpandCollapseState
+      if($st -ne 'Expanded'){ $ec.Expand(); Start-Sleep -Milliseconds 900; Say "INFO pick: InvMoreExpander expanded to look for $id" }
+      $e=ById $main $id 2; if($e){ return $e } }
+    # ItemCardButton, PriceTiersButton, DraftReceiveButton and the bonus fields live in InvSidePanel, which starts Collapsed (and so absent from UIA) until InvPanelToggleButton is pressed. Press it only when the panel is not showing (ProductName absent), so a second call never closes it.
+    $pn=ById $main 'ProductName' 1
+    if(-not $pn){ $tg=ById $main 'InvPanelToggleButton' 2
+      if($tg){ $tg.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 1200; Say "INFO pick: InvPanelToggleButton pressed to open the side panel while looking for $id" } }
+    return (ById $main $id 3)
+  }catch{ Say "INFO pick: expander/side panel fallback failed for ${id}: $($_.Exception.Message)"; return $null } }
+function Pick($id,$sec){ $e=ById $main $id $sec; if(-not $e){ if(ReLogin "Pick $id"){ $e=ById $main $id 3 } }; if(-not $e){ ReanchorMain "Pick $id"; $e=ById $main $id 1 }; if(-not $e){ $e=ExpandMoreQuiet $id }; if(-not $e){ $e=ScrollSearch $id 'Pick' }; return $e }
 function Sel($id,$tag){ if(-not (Guard $tag)){ Halt "$tag failed"; return $false }; $e=Pick $id 8; if(-not $e){ Say "NOTEXECUTED tab $tag"; Halt "$tag failed"; return $false }; try{ $e.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); Start-Sleep -Milliseconds 1200; Say "TAB $tag"; return $true }catch{ Say "NOTEXECUTED tab $tag select failed"; Halt "$tag failed"; return $false } }
 function Check($ok,$msg){ if($ok){ Say "PASS $msg" } else { Say "FAIL $msg"; $script:fails++ } }
 function TxtOf($id){ $e=Pick $id 3; if($e){ return $e.Current.Name } else { return '(missing)' } }

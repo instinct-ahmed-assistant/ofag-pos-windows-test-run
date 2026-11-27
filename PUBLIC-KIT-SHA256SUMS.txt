@@ -10,7 +10,7 @@ b0ce19f61f38966b112300b3fe6b71d97d899bbbec409128181cbd73f08a0926  ./native-run/s
 8bde48d90d03d367210ccfeb1b05c688ca8e39cf0a0f9ccc517bf0435f7af453  ./native-run/seedfresh/SeedFresh.csproj.txt
 f53ae7ae5ef926f1aadf67c0a9a645af16a490a660848c1b765b54ef7eec27ea  ./native-run/seedfresh/SeedFresh.exe
 aa65929f65a3f5c263d7f6f344af062635cced3ee69ed2d0bedde82e7bdba3bd  ./native-run/snap3/DbSnap.exe
-6a08f83adab7538fd097e4ef04d9251831246ec58d0eb523bd0980dafcf7ab6e  ./native-run/trial-l118-fresh.ps1
+7828601866595c5043081bb614bdceb931fc9d419b9ac7436152547e0efa2815  ./native-run/trial-l118-fresh.ps1
 9f5e29f5e8e884e1456ba7959156427483b0131bea3fc09996ffc74910689d00  ./native-run/winalias-prelude.ps1
 6b3b7f8945d2d77fc50226b80acc7260e57cef2af1de52976cc3f454ba69912d  ./native-run/ximp-expect.ps1
 f5ecb5fd1a247813a24f966c5afbd1d22572b9e02eef1a965e11cd4b5d8e8ad6  ./native-run/ximp-fixtures/FIXTURE-SHA256SUMS.txt
