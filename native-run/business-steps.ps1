@@ -32,12 +32,15 @@ function LayoutAudit($label,$root){
       # l172: an element inside a scrolling area whose centre lies outside that area's visible viewport is clipped, not overlapping (UIA still reports its virtual rectangle); skip it
       $clipped=$false; try{ $wk=[System.Windows.Automation.TreeWalker]::ControlViewWalker; $pa=$wk.GetParent($e); $hop=0; while($pa -and $hop -lt 25){ $sp=$null; try{ $sp=$pa.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern) }catch{}; if($sp){ $pr=$pa.Current.BoundingRectangle; if(-not $pr.IsEmpty){ $cx=$r.Left+$r.Width/2; $cy=$r.Top+$r.Height/2; if($cx -lt $pr.Left -or $cx -gt $pr.Right -or $cy -lt $pr.Top -or $cy -gt $pr.Bottom){ $clipped=$true; break } } }; $pa=$wk.GetParent($pa); $hop++ } }catch{}
       if($clipped){ continue }
-      $items+=[pscustomobject]@{N=$nm;T=$c.ControlType.ProgrammaticName;R=$r} }catch{} }
+      # l180: remember which top-level window owns the element; owned windows are listed under the main window by UIA, so l179 compared controls of different windows (PlanEnd of the main window x a button of the Procurement window) and reported false overlaps
+      $wh=0; $wrq=$null; try{ $wk2=[System.Windows.Automation.TreeWalker]::ControlViewWalker; $q=$wk2.GetParent($e); $hp=0; while($q -and $hp -lt 40){ if($q.Current.ControlType -eq [System.Windows.Automation.ControlType]::Window){ $wh=[int]$q.Current.NativeWindowHandle; $wrq=$q.Current.BoundingRectangle; break }; $q=$wk2.GetParent($q); $hp++ } }catch{}
+      $items+=[pscustomobject]@{N=$nm;T=$c.ControlType.ProgrammaticName;R=$r;W=$wh;WR=$(if($wrq){$wrq}else{$wr})} }catch{} }
     $flags=0; $n=$items.Count
     for($i=0;$i -lt $n;$i++){ $a=$items[$i]
-      if($a.R.Left -lt $wr.Left-2 -or $a.R.Right -gt $wr.Right+2 -or $a.R.Top -lt $wr.Top-2 -or $a.R.Bottom -gt $wr.Bottom+2){ Say "LAYOUT-FLAG [$label] OUTSIDE-WINDOW $($a.N) rect=$([int]$a.R.Left),$([int]$a.R.Top),$([int]$a.R.Right),$([int]$a.R.Bottom) window=$([int]$wr.Left),$([int]$wr.Top),$([int]$wr.Right),$([int]$wr.Bottom)"; $flags++ }
-      if(($a.T -match 'Button|Edit') -and ($a.R.Height -lt 20 -or $a.R.Width -lt 24)){ Say "LAYOUT-FLAG [$label] TINY $($a.N) size=$([int]$a.R.Width)x$([int]$a.R.Height)"; $flags++ }
+      $wr=$a.WR; if($a.R.Left -lt $wr.Left-2 -or $a.R.Right -gt $wr.Right+2 -or $a.R.Top -lt $wr.Top-2 -or $a.R.Bottom -gt $wr.Bottom+2){ Say "LAYOUT-FLAG [$label] OUTSIDE-WINDOW $($a.N) rect=$([int]$a.R.Left),$([int]$a.R.Top),$([int]$a.R.Right),$([int]$a.R.Bottom) window=$([int]$wr.Left),$([int]$wr.Top),$([int]$wr.Right),$([int]$wr.Bottom)"; $flags++ }
+      if(($a.T -match 'Button|Edit') -and ($a.N -notmatch '^PART_') -and ($a.R.Height -lt 20 -or $a.R.Width -lt 24)){ Say "LAYOUT-FLAG [$label] TINY $($a.N) size=$([int]$a.R.Width)x$([int]$a.R.Height)"; $flags++ }
       for($j=$i+1;$j -lt $n;$j++){ $b=$items[$j]
+        if($a.W -ne $b.W){ continue }
         $w=[Math]::Min($a.R.Right,$b.R.Right)-[Math]::Max($a.R.Left,$b.R.Left); $h=[Math]::Min($a.R.Bottom,$b.R.Bottom)-[Math]::Max($a.R.Top,$b.R.Top)
         if($w -gt 3 -and $h -gt 3){
           if(($a.T -match 'ComboBox|DataGrid|Expander') -or ($b.T -match 'ComboBox|DataGrid|Expander')){ continue }

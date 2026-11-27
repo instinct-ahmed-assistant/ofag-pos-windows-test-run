@@ -11,6 +11,8 @@ function JnCloseExtras($tag){
     Say "INFO journeys: $tag window check: $($all.Count) window(s) $($names -join ' ')"
     foreach($w in $all){ $h=0; try{ $h=[int]$w.Current.NativeWindowHandle }catch{}; if($h -eq $mh -or $h -eq 0){ continue }
       $nm=''; try{ $nm=[string]$w.Current.Name }catch{}; $cl=''; try{ $cl=[string]$w.Current.ClassName }catch{}
+      # l180: a WPF ToolTip or drop-down is a Popup-class window with no title; it is not an extra program window and closes itself. Logged, not counted as a failure.
+      if($cl -eq 'Popup' -and -not $nm){ Say "INFO journeys: $tag ignored Popup-class window with empty title (tooltip or drop-down, not a program window)"; continue }
       $closed=$false
       try{ $w.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close(); $closed=$true }catch{ Say "DIAG journeys: $tag WindowPattern.Close failed for [$nm]: $($_.Exception.Message)" }
       if(-not $closed){ try{ $bc=New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::Button); foreach($bt in @($w.FindAll($TS::Descendants,$bc))){ $bn=[string]$bt.Current.Name; $bi=[string]$bt.Current.AutomationId; if($bn -in @('Close','إغلاق','Cancel','إلغاء') -or $bi -eq 'Close'){ $bt.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); $closed=$true; break } } }catch{ Say "DIAG journeys: $tag close-button fallback failed for [$nm]: $($_.Exception.Message)" } }
