@@ -28,7 +28,10 @@ function LayoutAudit($label,$root){
     $els=@($root.FindAll($TS::Descendants,$cond)); $items=@()
     foreach($e in $els){ try{ $c=$e.Current; $r=$c.BoundingRectangle; if($r.IsEmpty -or $r.Width -lt 1 -or $r.Height -lt 1 -or [double]::IsInfinity($r.Width)){ continue }
       $nm=[string]$c.AutomationId; if(-not $nm){ $nm=[string]$c.Name }; if(-not $nm){ continue }
-      if($nm -match '^(Line |Page |Scroll|Minimize|Maximize|Close$|Restore|System)'){ continue }
+      if($nm -match '^(PageUp|PageDown|PageLeft|PageRight|LineUp|LineDown|LineLeft|LineRight|Line |Page |Scroll|Minimize|Maximize|Close$|Restore|System)'){ continue }
+      # l172: an element inside a scrolling area whose centre lies outside that area's visible viewport is clipped, not overlapping (UIA still reports its virtual rectangle); skip it
+      $clipped=$false; try{ $wk=[System.Windows.Automation.TreeWalker]::ControlViewWalker; $pa=$wk.GetParent($e); $hop=0; while($pa -and $hop -lt 25){ $sp=$null; try{ $sp=$pa.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern) }catch{}; if($sp){ $pr=$pa.Current.BoundingRectangle; if(-not $pr.IsEmpty){ $cx=$r.Left+$r.Width/2; $cy=$r.Top+$r.Height/2; if($cx -lt $pr.Left -or $cx -gt $pr.Right -or $cy -lt $pr.Top -or $cy -gt $pr.Bottom){ $clipped=$true; break } } }; $pa=$wk.GetParent($pa); $hop++ } }catch{}
+      if($clipped){ continue }
       $items+=[pscustomobject]@{N=$nm;T=$c.ControlType.ProgrammaticName;R=$r} }catch{} }
     $flags=0; $n=$items.Count
     for($i=0;$i -lt $n;$i++){ $a=$items[$i]

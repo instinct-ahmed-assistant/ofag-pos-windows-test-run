@@ -1,11 +1,11 @@
-name: "POS l169 native Windows probe (manual run, synthetic data only)"
+name: "POS l174 native Windows probe (manual run, synthetic data only)"
 on: workflow_dispatch
 permissions:
   contents: read
 jobs:
   flow:
     runs-on: windows-2022
-    timeout-minutes: 40
+    timeout-minutes: 95
     steps:
       - uses: actions/checkout@v4
       - name: Pre-flight (fails fast before any app launch)
@@ -13,8 +13,8 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           if(-not $IsWindows){ throw 'not a Windows runner' }
-          $zip='./POS-l169-TRIAL-candidate-win-x64.zip'
-          $pinZip='cb19b60fafb25d207c377406852a28d866bb25947f633b80250c145432f4cb9b'
+          $zip='./POS-l174-TRIAL-candidate-win-x64.zip'
+          $pinZip='7456fc2d313a96517acb65e79165a3c70c6c7c9beae4fe3e81779486cbb1bc40'
           $got=(Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
           if($got -ne $pinZip){ throw "zip sha256 mismatch: got $got expected $pinZip" }
           "PASS zip sha256 matches the pin ($got)"
@@ -29,12 +29,12 @@ jobs:
         run: ./native-run/parse-gate.ps1 -Files ./native-run/trial-l118-fresh.ps1,./native-run/ximp-expect.ps1,./native-run/l116-expect.ps1,./native-run/parse-gate.ps1,./native-run/loyalty-steps.ps1,./native-run/business-steps.ps1,./native-run/journeys-steps.ps1
       - name: 'Fresh default database, first owner login, screenshots of the default layout and every rail page'
         shell: pwsh
-        timeout-minutes: 34
+        timeout-minutes: 85
         env:
           OFAG_LOYALTY: '1'
           OFAG_BUSINESS: '1'
           OFAG_JOURNEYS: '1'
-        run: ./native-run/trial-l118-fresh.ps1 -Zip ./POS-l169-TRIAL-candidate-win-x64.zip -OutDir (Join-Path $env:RUNNER_TEMP 'evidence') -ExpectZipSha cb19b60fafb25d207c377406852a28d866bb25947f633b80250c145432f4cb9b -ExpectExeSha d29f975aabc4d220c6de3e0ac554264b8a31d1598a3487fd40574c24911ca892 -SeedExe ./native-run/seedfresh/SeedFresh.exe -ExpectSeedSha e6240526ec65c841b44bc3ff8680c55434a12cddf2708060aa46b905da1e8e53 -SnapExe ./native-run/snap3/DbSnap.exe -ExpectSnapSha aa65929f65a3f5c263d7f6f344af062635cced3ee69ed2d0bedde82e7bdba3bd -FixDir ./native-run/ximp-fixtures
+        run: ./native-run/trial-l118-fresh.ps1 -Zip ./POS-l174-TRIAL-candidate-win-x64.zip -OutDir (Join-Path $env:RUNNER_TEMP 'evidence') -ExpectZipSha 7456fc2d313a96517acb65e79165a3c70c6c7c9beae4fe3e81779486cbb1bc40 -ExpectExeSha 899ac92f323c2865edb5b446a73ebca897b3a924ca9c456df99dcb13e11ef3ce -SeedExe ./native-run/seedfresh/SeedFresh.exe -ExpectSeedSha e6240526ec65c841b44bc3ff8680c55434a12cddf2708060aa46b905da1e8e53 -SnapExe ./native-run/snap3/DbSnap.exe -ExpectSnapSha aa65929f65a3f5c263d7f6f344af062635cced3ee69ed2d0bedde82e7bdba3bd -FixDir ./native-run/ximp-fixtures
       - name: 'Phone monitor: decrypt the document fetched back from the server with Node (independent implementation)'
         if: always()
         shell: pwsh

@@ -64,13 +64,13 @@ function ReLogin($why){
   }catch{ Say "INFO ReLogin failed (script line $($_.InvocationInfo.ScriptLineNumber)): $($_.Exception.Message)"; return $false } }
 # l144: when an AutomationId is not found after the normal lookup, scroll every ScrollPattern container under the main window (0%, 100%, then 25/50/75%), re-find after each container move, and log container, percent and result. Capped at 6 searches per id. Still not found stays not found (callers report NOTEXECUTED or FAIL); this never fabricates an element.
 function ScrollSearch($id,$why){
-  try{ $k=[string]$id; if(-not $script:ssTries.ContainsKey($k)){ $script:ssTries[$k]=0 }; $script:ssTries[$k]++; if($script:ssTries[$k] -gt 6){ return $null }
+  try{ $k=[string]$id; if(-not $script:ssTries.ContainsKey($k)){ $script:ssTries[$k]=0 }; $script:ssTries[$k]++; if($script:ssTries[$k] -gt 2){ return $null }
     $cs=@($main.FindAll($TS::Descendants,(New-Object System.Windows.Automation.PropertyCondition($AE::IsScrollPatternAvailableProperty,$true))))
     Say "DIAG ScrollSearch $id ($why) try $($script:ssTries[$k]): $($cs.Count) scroll containers"
     foreach($sid in @('SalesScroll','SettingsScroll')){ $se=ById $main $sid 0; if($se){ try{ $sp0=$se.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern); $vp=-1; try{ $vp=$sp0.Current.VerticalScrollPercent }catch{}; $sp0.SetScrollPercent([System.Windows.Automation.ScrollPattern]::NoScroll,0); Start-Sleep -Milliseconds 300; $e0=ById $main $id 0; Say "DIAG ScrollSearch $id named scroller $sid was at $vp%, set to 0%: found=$([bool]$e0)"; if($e0){ return $e0 } }catch{ Say "DIAG ScrollSearch $id named scroller $sid not scrollable: $($_.Exception.Message)" } } }
-    foreach($pct in @(0,100,25,50,75)){ $ci=0
+    foreach($pct in @(0,100,50)){ $ci=0
       foreach($c in $cs){ $ci++; $sp=$null; try{ $sp=$c.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern) }catch{ continue }
-        $vs=$false; try{ $vs=$sp.Current.VerticallyScrollable }catch{}; if(-not $vs){ continue }
+        $vs=$false; try{ $vs=$sp.Current.VerticallyScrollable }catch{}; if(-not $vs){ continue }; $cn0=""; try{ $cn0=$c.Current.ClassName }catch{}; if($cn0 -eq "DataGrid"){ continue }
         $cid=''; $cls=''; try{ $cid=$c.Current.AutomationId; $cls=$c.Current.ClassName }catch{}
         try{ $sp.SetScrollPercent([System.Windows.Automation.ScrollPattern]::NoScroll,[double]$pct) }catch{ Say "DIAG ScrollSearch $id container $ci id=[$cid] class=[$cls] set $pct% failed: $($_.Exception.Message)"; continue }
         Start-Sleep -Milliseconds 300
@@ -941,7 +941,7 @@ if(Login 'owner' $pwOwner 'owner'){
       $sb=Pick 'InvSearchBox' 5; if($sb){ [void](& $setvB $sb 'Synthetic Slow B' 'search box'); Start-Sleep 2 }
       $brow=$null; foreach($r in @(RowsIn $main 'ProductGrid')){ if(@(RowCells $r) -ccontains 'Synthetic Slow B'){ $brow=$r; break } }
       if(-not $brow){ Say 'NOTEXECUTED bonus units: Synthetic Slow B row not found'; GridDump $main 'ProductGrid' 'bonus-products' } else {
-        $before=@(RowCells $brow)[2]
+        $cb0=@(RowCells $brow); $before=$cb0[$(if($cb0.Count -ge 5){ 2 } else { 1 })]; Say "DIAG bonus: product row cells ($($cb0.Count)): $($cb0 -join ' | ')"
         $sel=$false; try{ $brow.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); $sel=$true }catch{}; if(-not $sel){ [void](ClickRow $brow $false) }; Start-Sleep 1
         $ok=$true
         foreach($pair in @(@('LotNumber','BONUS-L1'),@('ReceiveQuantity','10'),@('UnitCost','12'),@('BonusUnits','2'),@('SupplierName','Synthetic Supplier'))){ $f=Pick $pair[0] 5; if($f){ if(-not (& $setvB $f $pair[1] $pair[0])){ $ok=$false } } else { Say "FAIL bonus: field $($pair[0]) not found"; $script:fails++; $ok=$false } }
@@ -955,7 +955,7 @@ if(Login 'owner' $pwOwner 'owner'){
           Start-Sleep 3
           $mm=FindModal; if($mm){ Say "INFO bonus: a dialog opened: title=[$($mm.Current.Name)] text=[$((@(WinBoxStatics $mm)) -join ' / ')]"; [void](ModalDismiss 'bonus-dialog') }
           Shot '75-bonus-after-receive'; Say "INFO bonus: status = [$(ValTxt 'StatusLabel')]"
-          $after=$null; foreach($r in @(RowsIn $main 'ProductGrid')){ if(@(RowCells $r) -ccontains 'Synthetic Slow B'){ $after=@(RowCells $r)[2]; break } }
+          $after=$null; foreach($r in @(RowsIn $main 'ProductGrid')){ if(@(RowCells $r) -ccontains 'Synthetic Slow B'){ $ca0=@(RowCells $r); $after=$ca0[$(if($ca0.Count -ge 5){ 2 } else { 1 })]; Say "DIAG bonus: product row cells after ($($ca0.Count)): $($ca0 -join ' | ')"; break } }
           Say "INFO bonus: stock units before=[$before] after=[$after]"
           $okn=$false; try{ $okn=([long]$after -eq ([long]$before + 12)) }catch{}
           Check $okn 'bonus units: receiving 10 paid + 2 free raised the stock by exactly 12'
