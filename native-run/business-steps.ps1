@@ -2,6 +2,37 @@ function ProcById($pw,$id){ try{ return $pw.FindFirst([System.Windows.Automation
 function ProcBtn($pw,$like){ try{ foreach($x in @($pw.FindAll([System.Windows.Automation.TreeScope]::Descendants,(New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::Button))))){ if([string]$x.Current.Name -like $like){ return $x } } }catch{}; return $null }
 # l195: the proof that the procurement heading text still has its hamza and tanween marks (the screenshots crop that heading at the window top). Reads the real UIA Name.
 function ProcHeadingCheck($pw){ try{ foreach($t in @($pw.FindAll([System.Windows.Automation.TreeScope]::Descendants,(New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::Text))))){ $n=[string]$t.Current.Name; if($n -like '3.*'){ $ok=($n.Contains([string][char]0x064B) -and $n.Contains([string][char]0x0623)); Check $ok "procurement heading keeps its Arabic marks (tanween U+064B and hamza U+0623 present in the UIA name)"; if(-not $ok){ Say "DIAG heading name = [$n]" }; return } }; Say 'NOTEXECUTED procurement heading mark check: heading text element not found'; $script:notexec++ }catch{ Say "INFO procurement heading check failed: $($_.Exception.Message)" } }
+function BizPickCombo($root,$id,$like){
+  # l198: open a combo, list its items (log them), select the first whose name matches $like (or the first item when $like is empty). Returns the chosen name or $null.
+  $cb=ById $root $id 4; if(-not $cb){ Say "INFO business: combo $id not found"; return $null }
+  $picked=$null
+  try{ $cb.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand(); Start-Sleep -Milliseconds 700
+    foreach($w in @(AllWinsDeep)){
+      $li=@($w.FindAll($TS::Descendants,(New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::ListItem))))
+      if($li.Count -gt 0){ Say "DIAG business: combo $id items ($($li.Count)) = [$((@($li | Select-Object -First 6 | ForEach-Object { [string]$_.Current.Name })) -join ' | ')]" }
+      foreach($it in $li){ $nm=[string]$it.Current.Name; if((-not $like) -or ($nm -like $like)){ try{ $it.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); $picked=$nm }catch{}; if($picked){ break } } }
+      if($picked){ break } }
+    try{ $cb.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Collapse() }catch{}
+  }catch{ Say "INFO business: combo $id pick error $($_.Exception.Message)" }
+  return $picked }
+function BizInvoke($root,$id){ $e=ById $root $id 4; if(-not $e){ return $false }; try{ $e.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 900; return $true }catch{ Say "INFO business: invoke $id failed: $($_.Exception.Message)"; return $false } }
+function BizSetText($root,$id,$v){ $e=ById $root $id 4; if(-not $e){ return $false }; try{ $e.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue($v); return $true }catch{ Say "INFO business: set $id failed: $($_.Exception.Message)"; return $false } }
+function BizMsg($w){ $m=ById $w 'BtMessage' 3; if($m){ return [string]$m.Current.Name } else { return '(missing)' } }
+function BizSeedCustomer(){
+  # l198: one synthetic customer so the cashier journey can attach a loyalty customer to a sale. Owner session, Sales tools window (the add button has no AutomationId, found by its name).
+  try{
+    $b=$main.FindFirst($TS::Descendants,(New-Object System.Windows.Automation.PropertyCondition($AE::NameProperty,'أدوات البيع والمرتجعات')))
+    if(-not $b){ Say 'NOTEXECUTED business customer seed: the sales tools button was not found'; $script:notexec++; return }
+    $b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep 2
+    $w=WinByTitle 'بيع بالأقدم صلاحية، خصم، مرتجع جزئي، نواقص' 10
+    if(-not $w){ Say 'NOTEXECUTED business customer seed: the sales tools window did not open'; $script:notexec++; return }
+    $okn=(BizSetText $w 'ToolsCustName' 'Synthetic Customer') -and (BizSetText $w 'ToolsCustPhone' '0100000000') -and (BizSetText $w 'ToolsCustLimit' '100')
+    $ab=ProcBtn $w 'إضافة عميل*'
+    if($okn -and $ab){ try{ $ab.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep 2; $dm=FindModal; if($dm){ Say "DIAG business customer seed: dialog [$($dm.Current.Name)]"; [void](ModalDismiss 'biz-seed-customer') }; Say 'INFO business customer seed: Synthetic Customer add invoked'; $script:seedCustomer=$true }catch{ Say "FAIL business customer seed: $($_.Exception.Message)"; $script:fails++ } }
+    else { Say 'NOTEXECUTED business customer seed: name box or add button not found'; $script:notexec++ }
+    try{ $w.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() }catch{}
+    Start-Sleep 1
+  }catch{ Say "INFO business customer seed skipped: $($_.Exception.Message)" } }
 function ProcSeed($pw){
   try{
     $sn=ProcById $pw 'ProcSupplierName'; if(-not $sn){ Say 'NOTEXECUTED procurement seed: supplier name box not found'; $script:notexec++; return }
@@ -12,6 +43,7 @@ function ProcSeed($pw){
     if($cb){
       try{
         $cb.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand(); Start-Sleep -Milliseconds 700
+        Shot 'proc-seed-combo-open'
         foreach($w in @(AllWinsDeep)){
           $li=@($w.FindAll($TS::Descendants,(New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::ListItem))))
           if($li.Count -gt 0){ Say "DIAG procurement seed: combo list item names = [$((@($li | ForEach-Object { [string]$_.Current.Name })) -join ' | ')]" }
@@ -111,7 +143,24 @@ function BusinessSteps(){
   if(BizSelectTab $w 'صحة النسخ الاحتياطي'){ $db=ById $w 'BtRestoreDrill' 3; if($db){ try{ $db.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep -Milliseconds 1500; $dr=ById $w 'BtRestoreDrillResult' 3; $drs=''; if($dr){ $drs=[string]$dr.Current.Name }; Say "DIAG business: restore drill result [$drs]"; Check ($drs.Length -gt 0) 'business: the restore drill button gives a visible result'; Shot 'biz-drill' }catch{ Say "FAIL business: restore drill step: $($_.Exception.Message)"; $script:fails++ } } else { Say 'NOTEXECUTED business: BtRestoreDrill not found'; $script:notexec++ } }
     # system check tab: run it and read the grid is NOT driven in this list (shown only)
   # quick key: set slot 1 to the first product is NOT driven (needs a product pick); the editor is only shown
-  Say 'NOTEXECUTED business: quick key set/clear, interaction save, VAT save, transfer note, CSV exports are not driven (they write data or open file dialogs); only the screens are shown'; $script:notexec++
+  # l198: drive VAT save, quick key set, interaction rule save and remove (synthetic data, restored afterwards where it matters)
+  if(BizSelectTab $w 'تقارير'){
+    if((BizSetText $w 'BtVatRate' '14') -and (BizInvoke $w 'BtVatSave')){ $vm=BizMsg $w; Say "DIAG business: VAT save message [$vm]"; Check ($vm -like '*تم حفظ النسبة*') 'business: saving a VAT rate of 14 shows the saved message'; Shot 'biz-vat-saved'
+      [void](BizSetText $w 'BtVatRate' '0'); [void](BizInvoke $w 'BtVatSave'); Say "DIAG business: VAT restored to 0, message [$(BizMsg $w)]" }
+    else { Say 'NOTEXECUTED business VAT save: rate box or save button not found'; $script:notexec++ }
+  } else { Say 'NOTEXECUTED business VAT save: the reports tab was not found'; $script:notexec++ }
+  if(BizSelectTab $w 'مفاتيح سريعة'){
+    $pn=BizPickCombo $w 'BtQuickProduct' ''
+    if($pn -and (BizSetText $w 'BtQuickSlot' '1') -and (BizSetText $w 'BtQuickLabel' 'Syn1') -and (BizInvoke $w 'BtQuickSet')){ $qm=BizMsg $w; Say "DIAG business: quick key message [$qm] product [$pn]"; Check ($qm -like '*تم حفظ الخانة*') 'business: saving quick key slot 1 shows the saved message'; Shot 'biz-quickkey-saved' }
+    else { Say "NOTEXECUTED business quick key set: product pick=[$pn] or controls missing"; $script:notexec++ }
+  } else { Say 'NOTEXECUTED business quick key set: the quick keys tab was not found'; $script:notexec++ }
+  if(BizSelectTab $w 'التفاعلات الدوائية'){
+    if((BizSetText $w 'BtIntA' 'syn-ingredient-a') -and (BizSetText $w 'BtIntB' 'syn-ingredient-b') -and (BizInvoke $w 'BtIntSave')){ $im=BizMsg $w; Say "DIAG business: interaction save message [$im]"; Check ($im -like '*تم حفظ التفاعل*') 'business: saving an interaction rule shows the saved message'; Shot 'biz-interaction-saved'; [void](BizInvoke $w 'BtIntRemove'); Say "DIAG business: interaction rule removed, message [$(BizMsg $w)]" }
+    else { Say 'NOTEXECUTED business interaction rule save: controls not found (owner only)'; $script:notexec++ }
+  } else { Say 'NOTEXECUTED business interaction rule save: the interactions tab was not found'; $script:notexec++ }
+  Say 'NOTEXECUTED business: transfer note (needs a batch and a destination)'; $script:notexec++
+  Say 'EXCLUDED-SCOPE business: CSV exports open a Windows save-file dialog and write outside the app; not driven'
+
   Shot 'biz-2-after'; BizCloseWin $w 'أدوات الأعمال'
   # sales screen strip (rail label is 'البيع', page element StockGrid; 'المبيعات والورديات' is the Reports page, not this one): the three buttons and the customer window
   if(-not (BizNavOpt @('البيع','Sales') 'biz-sales' 'StockGrid')){ Say 'NOTEXECUTED business: could not open the Sales page'; $script:notexec++; return }
@@ -123,6 +172,7 @@ function BusinessSteps(){
   $qw=BizOpen 'QuickKeysButton' 'مفاتيح سريعة'
   if($qw){ Check ($true) 'business: the quick keys window opens'; Shot 'biz-5-quickkeys'; BizCloseWin $qw 'مفاتيح سريعة' }
   Say 'INFO business: the refund reason dialog is driven in the journeys step list (JnManagerRefund: confirm, reason box RrNote, OK RrOk), not here; l195 and earlier counted it as NOTEXECUTED here although the journeys covered it (counting change disclosed in l196)'
+  BizSeedCustomer
   Say 'INFO business: the reprint text window is driven in the journeys list (JnReprint) after the cashier sale'
   Say 'NOTEXECUTED business: interaction prompt at sale is not driven in this list (the QR is checked in the phone monitor block)'; $script:notexec++
 }

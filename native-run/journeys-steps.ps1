@@ -1,3 +1,28 @@
+function JnCustomerAfterSale(){
+  # l198: the status line is overwritten by the generic saved message, so read the customer's own screen: profile text and purchase rows after the linked sale
+  try{
+    $b=Pick 'SaleCustomerButton' 4; if(-not $b){ return }
+    $b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep 2
+    $w=WinByTitle 'عميل للبيع' 10; if(-not $w){ Say 'NOTEXECUTED journeys cashier customer after sale: window did not open'; $script:notexec++; return }
+    $pn=BizPickCombo $w 'CsCustomer' '*Synthetic Customer*'; Start-Sleep 1
+    $pr=ById $w 'CsProfile' 3; $pt=if($pr){ [string]$pr.Current.Name } else { '(missing)' }; Say "DIAG journeys cashier customer after sale: profile [$pt]"
+    $pg=ById $w 'CsPurchases' 3; $cnt=-1; if($pg){ try{ $cnt=[int]$pg.GetCurrentPattern([System.Windows.Automation.GridPattern]::Pattern).Current.RowCount }catch{} }; Say "DIAG journeys cashier customer after sale: purchase rows=$cnt"
+    Check ($cnt -ge 1) 'journeys cashier: the customer screen lists the linked sale'; Shot 'jn-cashier-customer-after-sale'
+    try{ $w.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() }catch{}; Start-Sleep 1
+  }catch{ Say "INFO journeys cashier customer after sale: $($_.Exception.Message)" } }
+function JnStatusText(){ $e=Pick 'StatusLabel' 3; if($e){ return [string]$e.Current.Name } else { return '(missing)' } }
+$script:jnCustomerAttached=$false
+function JnCashierCustomer(){
+  # l198: attach the synthetic loyalty customer to the next sale BEFORE paying (non-controlled line; the customer was added by the owner in BizSeedCustomer)
+  try{
+    $b=Pick 'SaleCustomerButton' 4; if(-not $b){ Say 'NOTEXECUTED journeys cashier customer: SaleCustomerButton not found'; $script:notexec++; return }
+    $b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep 2
+    $w=WinByTitle 'عميل للبيع' 10; if(-not $w){ Say 'NOTEXECUTED journeys cashier customer: the customer window did not open'; $script:notexec++; return }
+    $pn=BizPickCombo $w 'CsCustomer' '*Synthetic Customer*'; if(-not $pn){ $pn=BizPickCombo $w 'CsCustomer' '' }
+    Say "DIAG journeys cashier customer: chosen [$pn]"
+    if($pn -and (BizInvoke $w 'CsUseNext')){ Start-Sleep 1; [void](JnLeftoverModal 'cashier-customer'); $lb=Pick 'SaleCustomerLabel' 3; $lt=if($lb){ [string]$lb.Current.Name } else { '(missing)' }; Say "DIAG journeys cashier customer: label [$lt]"; Check ($lt -like '*البيع التالي للعميل*') 'journeys cashier: the next sale is attached to the chosen customer (label shown)'; $script:jnCustomerAttached=$true; Shot 'jn-cashier-customer-attached' }
+    else { Say 'NOTEXECUTED journeys cashier customer: no customer could be chosen (see DIAG)'; $script:notexec++; try{ $w.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() }catch{} }
+  }catch{ Say "FAIL journeys cashier customer: $($_.Exception.Message)"; $script:fails++ } }
 function JnReprint(){
   # l196: the reprint text window, driven right after the cashier sale (this.receipt is only set in the session that made the sale)
   $rb=Pick 'ReprintButton' 4; if(-not $rb){ Say 'NOTEXECUTED journeys reprint: ReprintButton not found'; $script:notexec++; return }
@@ -8,6 +33,8 @@ function JnReprint(){
   Check ($true) 'journeys reprint: the duplicate-receipt window opens'
   $tb=$rw.FindFirst([System.Windows.Automation.TreeScope]::Descendants,(New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty,'ReprintText')))
   $txt=''; if($tb){ try{ $txt=[string]$tb.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value }catch{} }
+  if($tb -and -not $txt){ try{ $txt=[string]$tb.GetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern).DocumentRange.GetText(20000) }catch{ Say "INFO journeys reprint: TextPattern read failed: $($_.Exception.Message)" } }
+  Say "DIAG journeys reprint: first lines = [$((($txt -split "`n") | Select-Object -First 6) -join ' // ')]"
   Say "DIAG journeys reprint: text length=$($txt.Length)"
   Check ($txt.Length -gt 20 -and $txt -match '\d') 'journeys reprint: the window shows a non-empty receipt text with numbers'
   Shot 'jn-cashier-reprint'
@@ -108,10 +135,10 @@ function JnCashierFlow(){
     $sel=$false; try{ $r0.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); $sel=$true }catch{}; if(-not $sel){ [void](ClickRow $r0 $false) }; Start-Sleep 1
     [void](JnSet 'SaleQuantity' '1'); [void](JnSet 'SaleLineDiscount' '0'); [void](JnInvoke 'AddCartButton'); Start-Sleep 2
     $c1=@(Rows 'CartGrid').Count; Say "DIAG journeys: cart rows after add = $c1"; Shot 'jn-cashier-cart'; Check ($c1 -eq 1) 'journeys cashier: adding the selected stock line puts one row in the cart'
-    if($c1 -ge 1){ if(JnInvoke 'Pay'){ [void](JnYes 'jn-cashier-sale-confirm'); Start-Sleep 1
+    if($c1 -ge 1){ JnCashierCustomer; if(JnInvoke 'Pay'){ [void](JnYes 'jn-cashier-sale-confirm'); Start-Sleep 1
         $ctrl=$null; foreach($w in @(TopWins $p.Id)){ if($w.Current.Name -like '*الدواء المراقب*'){ $ctrl=$w } }
         if($ctrl){ Say 'INFO journeys: the chosen line is a controlled drug and its register dialog opened; the sale was not completed by this journey'; Shot 'jn-cashier-controlled-dialog'; $script:notexec++ }
-        else { [void](JnLeftoverModal 'cashier-after-sale'); $c2=@(Rows 'CartGrid').Count; Shot 'jn-cashier-after-sale'; Say "DIAG journeys: cart rows after sale = $c2; last sale [$(ValTxt 'LastSaleLabel')]; status [$(ValTxt 'StatusLabel')]"; Check ($c2 -eq 0) 'journeys cashier: after paying the cart is empty (sale saved)' } } } }
+        else { [void](JnLeftoverModal 'cashier-after-sale'); if($script:jnCustomerAttached){ $stx=JnStatusText; Say "DIAG journeys cashier customer: status after sale [$stx]"; JnCustomerAfterSale }; $c2=@(Rows 'CartGrid').Count; Shot 'jn-cashier-after-sale'; Say "DIAG journeys: cart rows after sale = $c2; last sale [$(ValTxt 'LastSaleLabel')]; status [$(ValTxt 'StatusLabel')]"; Check ($c2 -eq 0) 'journeys cashier: after paying the cart is empty (sale saved)' } } } }
   try{ JnReprint }catch{ Say "FAIL journeys reprint: $($_.Exception.Message) (line $($_.InvocationInfo.ScriptLineNumber))"; $script:fails++ }
   if(NavTo @('المبيعات والورديات','Sales and shifts') 'jn-cashier-reports' 'SalesGrid'){ $rf=ById $main 'RefundButton' 3; $vis=$false; if($rf){ try{ $vis=(-not $rf.Current.IsOffscreen) -and $rf.Current.IsEnabled }catch{} }; Say "DIAG journeys: cashier sees an enabled RefundButton = $vis"; Shot 'jn-cashier-reports-refund'
     if($vis){ Say 'INFO journeys: the refund button is visible to the cashier; Core refuses the action for a cashier (Refund is Owner and Manager only), not clicked here'; $script:notexec++ } else { Check $true 'journeys cashier: the refund button is not offered to a cashier' } }
