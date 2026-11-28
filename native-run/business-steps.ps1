@@ -63,8 +63,8 @@ function BizInteractionPrompt(){
     if(-not (BizInvoke $main 'Pay')){ Say 'NOTEXECUTED interaction prompt: Pay button not found'; $script:notexec++; return }
     $m=WaitModal 10
     if(-not $m){ $se=Pick 'StatusLabel' 3; Say "DIAG interaction prompt: no dialog after Pay; status line [$(if($se){[string]$se.Current.Name}else{'(missing)'})] shift [$(ValTxt 'ShiftStatusLabel')]"; Say 'NOTEXECUTED interaction prompt: no dialog appeared after Pay (see DIAG: shift may be closed, or the two lines do not share the ingredient)'; $script:notexec++; return }
-    $script:curModal=$m; $txt=(@(WinBoxStatics $m) -join ' / '); Say "DIAG interaction prompt: dialog title=[$($m.Current.Name)] text=[$txt]"; Shot 'biz-interaction-prompt'
-    Check ($m.Current.Name -like '*تنبيه دوائي*' -and $txt -like '*syntheticine*') 'interaction prompt: the drug warning names the shared active ingredient'
+    $script:curModal=$m; $txt=(@(WinBoxStatics $m) -join ' / '); if($txt -notlike '*syntheticine*'){ $dn=@(ModalDescs $m | ForEach-Object { $_.name } | Where-Object { $_ }); $txt=(($txt,($dn -join ' / ')) -join ' / '); try{ $vp=$m.FindFirst([System.Windows.Automation.TreeScope]::Descendants,(New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::IsValuePatternAvailableProperty,$true))); if($vp){ $txt+=' / '+[string]$vp.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value } }catch{} }; Say "DIAG interaction prompt: dialog title=[$($m.Current.Name)] text=[$txt]"; Shot 'biz-interaction-prompt'
+    Check (($m.Current.Name -like '*تنبيه دوائي*' -or $m.Current.Name -like '*Drug warning*') -and $txt -like '*syntheticine*') 'interaction prompt: the drug warning names the shared active ingredient'
     $d=ModalDescs $m; $no=XPickButton $d 'no'
     if($no){ [void](PressDesc $no 'ip-no' 'No'); Start-Sleep 2; Say 'INFO interaction prompt: answered No, no sale was made' } else { Say 'FAIL interaction prompt: No button not identified; nothing pressed'; $script:fails++ }
     $mm=FindModal; if($mm){ [void](ModalDismiss 'interaction-prompt-left') }
