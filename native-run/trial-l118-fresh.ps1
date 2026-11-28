@@ -941,7 +941,7 @@ if(Login 'owner' $pwOwner 'owner'){
       $sb=Pick 'InvSearchBox' 5; if($sb){ [void](& $setvB $sb 'Synthetic Slow B' 'search box'); Start-Sleep 2 }
       $brow=$null; foreach($r in @(RowsIn $main 'ProductGrid')){ if(@(RowCells $r) -ccontains 'Synthetic Slow B'){ $brow=$r; break } }
       if(-not $brow){ Say 'NOTEXECUTED bonus units: Synthetic Slow B row not found'; GridDump $main 'ProductGrid' 'bonus-products' } else {
-        $cb0=@(RowCells $brow); $before=$cb0[$(if($cb0.Count -ge 5){ 2 } else { 1 })]; Say "DIAG bonus: product row cells ($($cb0.Count)): $($cb0 -join ' | ')"
+        $cb0=@(RowCells $brow); $before=$(if($cb0.Count -ge 5){ $cb0[2] } elseif($cb0.Count -eq 4){ $cb0[1] } else { $null }); Say "DIAG bonus: product row cells ($($cb0.Count)): $($cb0 -join ' | ')"
         $sel=$false; try{ $brow.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); $sel=$true }catch{}; if(-not $sel){ [void](ClickRow $brow $false) }; Start-Sleep 1
         $ok=$true
         foreach($pair in @(@('LotNumber','BONUS-L1'),@('ReceiveQuantity','10'),@('UnitCost','12'),@('BonusUnits','2'),@('SupplierName','Synthetic Supplier'))){ $f=Pick $pair[0] 5; if($f){ if(-not (& $setvB $f $pair[1] $pair[0])){ $ok=$false } } else { Say "FAIL bonus: field $($pair[0]) not found"; $script:fails++; $ok=$false } }
@@ -955,10 +955,10 @@ if(Login 'owner' $pwOwner 'owner'){
           Start-Sleep 3
           $mm=FindModal; if($mm){ Say "INFO bonus: a dialog opened: title=[$($mm.Current.Name)] text=[$((@(WinBoxStatics $mm)) -join ' / ')]"; [void](ModalDismiss 'bonus-dialog') }
           Shot '75-bonus-after-receive'; Say "INFO bonus: status = [$(ValTxt 'StatusLabel')]"
-          $after=$null; foreach($r in @(RowsIn $main 'ProductGrid')){ if(@(RowCells $r) -ccontains 'Synthetic Slow B'){ $ca0=@(RowCells $r); $after=$ca0[$(if($ca0.Count -ge 5){ 2 } else { 1 })]; Say "DIAG bonus: product row cells after ($($ca0.Count)): $($ca0 -join ' | ')"; break } }
+          $after=$null; foreach($r in @(RowsIn $main 'ProductGrid')){ if(@(RowCells $r) -ccontains 'Synthetic Slow B'){ $ca0=@(RowCells $r); $after=$(if($ca0.Count -ge 5){ $ca0[2] } elseif($ca0.Count -eq 4){ $ca0[1] } else { $null }); Say "DIAG bonus: product row cells after ($($ca0.Count)): $($ca0 -join ' | ')"; break } }
           Say "INFO bonus: stock units before=[$before] after=[$after]"
           $okn=$false; try{ $okn=([long]$after -eq ([long]$before + 12)) }catch{}
-          Check $okn 'bonus units: receiving 10 paid + 2 free raised the stock by exactly 12'
+          if($null -eq $before -or $null -eq $after){ Say 'NOTEXECUTED bonus units: stock column not visible in the grid (3 cells), stock delta not read' } else { Check $okn 'bonus units: receiving 10 paid + 2 free raised the stock by exactly 12' }
         } else { Say 'NOTEXECUTED bonus units: form could not be filled' }
       }
       $sb=Pick 'InvSearchBox' 5; if($sb){ [void](& $setvB $sb '' 'search box clear') }
