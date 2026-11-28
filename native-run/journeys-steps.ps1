@@ -1,4 +1,4 @@
-function JnCustomerAfterSale(){
+﻿function JnCustomerAfterSale(){
   # l198: the status line is overwritten by the generic saved message, so read the customer's own screen: profile text and purchase rows after the linked sale
   try{
     $b=Pick 'SaleCustomerButton' 4; if(-not $b){ return }
@@ -166,6 +166,7 @@ function JnManagerRefund(){
       $ok=JnFindById 'RrOk' 8
       if(-not $ok){ Say 'FAIL journeys: the refund reason dialog did not open'; $script:fails++; Shot 'jn-manager-no-reason-dialog' } else {
         $note=JnFindById 'RrNote' 2; if($note){ try{ $note.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).SetValue('Synthetic journey refund') }catch{} }
+        try{ $rc=JnFindById 'RrReason' 2; if($rc){ $rn=[string]$rc.Current.Name; $rv=''; try{ $rv=[string]$rc.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value }catch{}; $ri=''; try{ $ri=((@($rc.FindAll([System.Windows.Automation.TreeScope]::Descendants,[System.Windows.Automation.Condition]::TrueCondition)) | ForEach-Object { [string]$_.Current.Name }) -join ' | ') }catch{}; Say "DIAG journeys: refund reason combo name=[$rn] value=[$rv] inner=[$ri]"; Check (($rn+$rv+$ri) -notmatch 'Code\s*=' -and ($rn+$rv+$ri) -match '[\u0600-\u06FF]') 'journeys: the refund reason combo shows an Arabic word and no object text (no Code =)' } else { Say 'NOTEXECUTED journeys: RrReason combo not found'; $script:notexec++ } }catch{ Say "INFO journeys: reason combo read failed: $($_.Exception.Message)" }
         Shot 'jn-manager-reason-dialog'; try{ $ok.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }catch{ Say "FAIL journeys: RrOk invoke: $($_.Exception.Message)"; $script:fails++ }; Start-Sleep 3
         [void](JnLeftoverModal 'manager-after-reason'); Shot 'jn-manager-after-refund'; Say "DIAG journeys: after refund status [$(ValTxt 'StatusLabel')]"
         Check (-not (FindModal)) 'journeys manager: no dialog is left open after the refund' } } }
