@@ -40,6 +40,13 @@ function JnCreateUser($name,$pw,$roleWord){
       if($null -ne $steps){ try{ $nr.SetFocus(); Start-Sleep -Milliseconds 400; for($k=0;$k -lt $steps;$k++){ [System.Windows.Forms.SendKeys]::SendWait('{DOWN}'); Start-Sleep -Milliseconds 300 }; $picked=$true; Say "DIAG journeys: role [$roleWord] chosen by $steps Down key(s) (popup items found: $(@($li).Count))" }catch{ Say "DIAG journeys: keyboard role pick failed: $($_.Exception.Message)" } } }
     Say "DIAG journeys: role item [$roleWord] picked=$picked; box now shows [$([string]$nr.Current.Name)]"
     if(-not $picked){ Say "NOTEXECUTED journeys: role $roleWord could not be chosen for $name"; return $false }
+    # l195: verify the box really holds the wanted role before creating the user (l195: inventory1 box read [] and the user looked like a manager)
+    $rd={ $t=''; try{ $t=[string]$nr.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value }catch{}; if(-not $t){ try{ $g=@($nr.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()); if($g.Count -gt 0){ $t=[string]$g[0].Current.Name } }catch{} }; if(-not $t){ $t=[string]$nr.Current.Name }; $t }
+    $now=& $rd; Say "DIAG journeys: role box reads [$now] (want *$roleWord*)"
+    if($now -notlike "*$roleWord*"){
+      $st2=@{ 'Cashier'=0; 'Inventory'=1; 'HR'=2; 'Manager'=3 }[$roleWord]
+      if($null -ne $st2 -and (BringFg)){ try{ $nr.SetFocus(); Start-Sleep -Milliseconds 400; [System.Windows.Forms.SendKeys]::SendWait('{HOME}'); Start-Sleep -Milliseconds 300; for($k=0;$k -lt $st2;$k++){ [System.Windows.Forms.SendKeys]::SendWait('{DOWN}'); Start-Sleep -Milliseconds 300 }; $now=& $rd; Say "DIAG journeys: after HOME + $st2 Down key(s) the role box reads [$now]" }catch{ Say "DIAG journeys: role retry failed: $($_.Exception.Message)" } }
+      if($now -notlike "*$roleWord*"){ Say "NOTEXECUTED journeys: role box does not show $roleWord (reads [$now]); $name NOT created, so no wrong-role user exists"; $script:notexec++; return $false } }
     $ab.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep 3
     $md=FindModal; if($md){ Say "DIAG journeys: modal after create $name [$($md.Current.Name)]"; try{ $md.SetFocus() }catch{}; [System.Windows.Forms.SendKeys]::SendWait('{ENTER}'); Start-Sleep 1 }
     $ok=$true
@@ -50,6 +57,8 @@ function JnVisit($role,$mustLackAdmin){
   $items=@(); for($i=1;$i -le 5;$i++){ $items=@(RailItems); if($items.Count -gt 0){ break }; Start-Sleep 2 }
   $labels=@($items | ForEach-Object { if($_.Label){ $_.Label } else { $_.Raw } }); Say "INFO journeys: $role rail ($($labels.Count)): $($labels -join ' | ')"
   Check ($labels.Count -ge 1) "journeys: $role sees at least one page on the rail"
+  if(-not $script:jnRail){ $script:jnRail=@{} }; $script:jnRail[$role]=$labels.Count
+  if($role -eq 'inventory' -and $script:jnRail.ContainsKey('manager')){ Check ($labels.Count -lt $script:jnRail['manager']) "journeys: inventory sees fewer rail pages ($($labels.Count)) than manager ($($script:jnRail['manager']))" }
   $hasAdmin=@($labels | Where-Object { $_ -match 'الإدارة' }).Count -gt 0
   if($mustLackAdmin){ Check (-not $hasAdmin) "journeys: $role does not see the administration page" } else { Check $hasAdmin "journeys: $role sees the administration page" }
   $n=0; foreach($it in $items){ $n++; $lab=if($it.Label){ $it.Label } else { "item$n" }
