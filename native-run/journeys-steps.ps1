@@ -36,6 +36,13 @@ function JnReprint(){
   $tb=$rw.FindFirst([System.Windows.Automation.TreeScope]::Descendants,(New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty,'ReprintText')))
   $txt=''; if($tb){ try{ $txt=[string]$tb.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value }catch{} }
   if($tb -and -not $txt){ try{ $txt=[string]$tb.GetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern).DocumentRange.GetText(20000) }catch{ Say "INFO journeys reprint: TextPattern read failed: $($_.Exception.Message)" } }
+  if(-not $txt -and $tb){ $txt=[string]$tb.Current.Name }
+  # l205: strengthened. The l204 table put each value one character per line, with non-empty text. Now: enough lines, the label and its value on the same row (UIA text elements), and no narrow wrapped text element.
+  $nl=@(($txt -split "`n") | Where-Object { $_.Trim().Length -gt 0 }).Count; Say "DIAG journeys reprint: non-empty lines=$nl"
+  $narrow=@(); $tbl=@(); try{ foreach($te in @($rw.FindAll([System.Windows.Automation.TreeScope]::Descendants,(New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::Text))))){ $nm=[string]$te.Current.Name; $br=$te.Current.BoundingRectangle; if($nm.Length -ge 4 -and -not $br.IsEmpty){ $tbl+=$nm; if(($br.Width / $nm.Length) -lt 3.0){ $narrow+=("[$nm w=$([int]$br.Width)]") } } } }catch{}
+  Say "DIAG journeys reprint: text elements=$($tbl.Count) narrow=$($narrow.Count) $($narrow -join ' ')"
+  Check ($nl -ge 8) 'journeys reprint: the receipt has at least 8 non-empty lines (header, id, time, cashier, item, total, thanks)'
+  Check ($narrow.Count -eq 0 -and $tbl.Count -ge 5) 'journeys reprint: no text element is squeezed (width per character) and at least 5 text elements are measured'
   Say "DIAG journeys reprint: first lines = [$((($txt -split "`n") | Select-Object -First 6) -join ' // ')]"
   Say "DIAG journeys reprint: text length=$($txt.Length)"
   Check ($txt.Length -gt 20 -and $txt -match '\d') 'journeys reprint: the window shows a non-empty receipt text with numbers'
