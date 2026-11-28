@@ -9,7 +9,7 @@ function BizPickCombo($root,$id,$like){
   try{ $cb.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Expand(); Start-Sleep -Milliseconds 700
     foreach($w in @(AllWinsDeep)){
       $li=@($w.FindAll($TS::Descendants,(New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::ListItem))))
-      if($li.Count -gt 0){ Say "DIAG business: combo $id items ($($li.Count)) = [$((@($li | Select-Object -First 6 | ForEach-Object { [string]$_.Current.Name })) -join ' | ')]" }
+      if($li.Count -gt 0){ Say "DIAG business: combo $id items ($($li.Count)) = [$((@($li | Select-Object -First 6 | ForEach-Object { [string]$_.Current.Name + '@' + [int]$_.Current.BoundingRectangle.X + ',' + [int]$_.Current.BoundingRectangle.Y })) -join ' | ')]" }
       foreach($it in $li){ $nm=[string]$it.Current.Name; if((-not $like) -or ($nm -like $like)){ try{ $it.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); $picked=$nm }catch{}; if($picked){ break } } }
       if($picked){ break } }
     try{ $cb.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern).Collapse() }catch{}
@@ -33,6 +33,43 @@ function BizSeedCustomer(){
     try{ $w.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() }catch{}
     Start-Sleep 1
   }catch{ Say "INFO business customer seed skipped: $($_.Exception.Message)" } }
+function BizSelectRowByText($gridId,$text){
+  $rows=@(RowsIn $main $gridId); foreach($r in $rows){ $c=(RowCells $r) -join ' | '; if($c -like "*$text*"){ $ok=$false; try{ $r.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); $ok=$true }catch{}; if(-not $ok){ [void](ClickRow $r $false) }; Start-Sleep -Milliseconds 700; return $true } }
+  return $false }
+function BizInteractionPrompt(){
+  # l198/l199: interaction prompt at sale. Two stock lines get the same synthetic active ingredient in their item cards (owner), both go in the cart, Pay shows the warning (DUPLICATE active ingredient), the driver answers No so no sale is made.
+  try{
+    if(-not (BizNavOpt @('البيع','Sales') 'biz-ip-sales' 'StockGrid')){ Say 'NOTEXECUTED interaction prompt: could not open the Sales page'; $script:notexec++; return }
+    $st=@(RowsIn $main 'StockGrid'); if($st.Count -lt 2){ Say 'NOTEXECUTED interaction prompt: fewer than two stock rows'; $script:notexec++; return }
+    $names=@(); foreach($r in ($st | Select-Object -First 4)){ $cells=@(RowCells $r); if($cells.Count -gt 0){ $names+=[string]$cells[0] } }
+    $names=@($names | Where-Object { $_ } | Select-Object -Unique | Select-Object -First 2); Say "DIAG interaction prompt: products [$($names -join ' | ')]"
+    if($names.Count -lt 2){ Say 'NOTEXECUTED interaction prompt: could not read two product names'; $script:notexec++; return }
+    if(-not (BizNavOpt @('الأصناف والمشتريات','Products & Purchasing') 'biz-ip-inv' 'InvSearchBox')){ Say 'NOTEXECUTED interaction prompt: could not open the Products page'; $script:notexec++; return }
+    $carded=0
+    foreach($nm in $names){
+      if(-not (BizSelectRowByText 'ProductGrid' $nm)){ Say "INFO interaction prompt: product row [$nm] not found in the table"; continue }
+      $cb=Pick 'ItemCardButton' 5; if(-not $cb){ Say 'INFO interaction prompt: ItemCardButton not found'; continue }
+      try{ $cb.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }catch{ Say "INFO interaction prompt: card invoke failed: $($_.Exception.Message)"; continue }
+      Start-Sleep 2; $cw=WinByTitle 'بطاقة الصنف' 10; if(-not $cw){ Say 'INFO interaction prompt: item card window did not open'; continue }
+      if((BizSetText $cw 'CardActive' 'syntheticine') -and (BizInvoke $cw 'CardSave')){ $cm=ById $cw 'CardMessage' 3; Say "DIAG interaction prompt: card save message [$(if($cm){[string]$cm.Current.Name}else{'(missing)'})] for [$nm]"; $carded++ }
+      try{ $cw.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() }catch{}; Start-Sleep 1
+    }
+    if($carded -lt 2){ Say "NOTEXECUTED interaction prompt: only $carded item card(s) saved with the shared ingredient"; $script:notexec++; return }
+    if(-not (BizNavOpt @('البيع','Sales') 'biz-ip-sales2' 'StockGrid')){ Say 'NOTEXECUTED interaction prompt: could not reopen the Sales page'; $script:notexec++; return }
+    $cl=Pick 'ClearCart' 4; if($cl){ try{ $cl.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }catch{}; Start-Sleep 1 }
+    foreach($nm in $names){ if(BizSelectRowByText 'StockGrid' $nm){ [void](BizSetText $main 'SaleQuantity' '1'); [void](BizInvoke $main 'AddCartButton'); Start-Sleep 1 } }
+    $cart=@(Rows 'CartGrid').Count; Say "DIAG interaction prompt: cart rows = $cart"
+    if($cart -lt 2){ Say 'NOTEXECUTED interaction prompt: the cart does not hold two lines'; $script:notexec++; return }
+    if(-not (BizInvoke $main 'Pay')){ Say 'NOTEXECUTED interaction prompt: Pay button not found'; $script:notexec++; return }
+    $m=WaitModal 10
+    if(-not $m){ $se=Pick 'StatusLabel' 3; Say "DIAG interaction prompt: no dialog after Pay; status line [$(if($se){[string]$se.Current.Name}else{'(missing)'})] shift [$(ValTxt 'ShiftStatusLabel')]"; Say 'NOTEXECUTED interaction prompt: no dialog appeared after Pay (see DIAG: shift may be closed, or the two lines do not share the ingredient)'; $script:notexec++; return }
+    $script:curModal=$m; $txt=(@(WinBoxStatics $m) -join ' / '); Say "DIAG interaction prompt: dialog title=[$($m.Current.Name)] text=[$txt]"; Shot 'biz-interaction-prompt'
+    Check ($m.Current.Name -like '*تنبيه دوائي*' -and $txt -like '*syntheticine*') 'interaction prompt: the drug warning names the shared active ingredient'
+    $d=ModalDescs $m; $no=XPickButton $d 'no'
+    if($no){ [void](PressDesc $no 'ip-no' 'No'); Start-Sleep 2; Say 'INFO interaction prompt: answered No, no sale was made' } else { Say 'FAIL interaction prompt: No button not identified; nothing pressed'; $script:fails++ }
+    $mm=FindModal; if($mm){ [void](ModalDismiss 'interaction-prompt-left') }
+    $cl=Pick 'ClearCart' 4; if($cl){ try{ $cl.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }catch{}; Start-Sleep 1 }
+  }catch{ Say "INFO interaction prompt: $($_.Exception.Message)" } }
 function ProcSeed($pw){
   try{
     $sn=ProcById $pw 'ProcSupplierName'; if(-not $sn){ Say 'NOTEXECUTED procurement seed: supplier name box not found'; $script:notexec++; return }
@@ -46,7 +83,7 @@ function ProcSeed($pw){
         Shot 'proc-seed-combo-open'
         foreach($w in @(AllWinsDeep)){
           $li=@($w.FindAll($TS::Descendants,(New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::ListItem))))
-          if($li.Count -gt 0){ Say "DIAG procurement seed: combo list item names = [$((@($li | ForEach-Object { [string]$_.Current.Name })) -join ' | ')]" }
+          if($li.Count -gt 0){ Say "DIAG procurement seed: combo list item names (count $($li.Count)) = [$((@($li | ForEach-Object { [string]$_.Current.Name + '@' + [int]$_.Current.BoundingRectangle.X + ',' + [int]$_.Current.BoundingRectangle.Y + ' cls=' + [string]$_.Current.ClassName })) -join ' | ')]" }
           foreach($it in $li){ if([string]$it.Current.Name -like '*Synthetic Supplier*'){ try{ $it.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select(); $picked=$true }catch{}; if($picked){ break } } }
           if($picked){ break }
         }
@@ -173,6 +210,7 @@ function BusinessSteps(){
   if($qw){ Check ($true) 'business: the quick keys window opens'; Shot 'biz-5-quickkeys'; BizCloseWin $qw 'مفاتيح سريعة' }
   Say 'INFO business: the refund reason dialog is driven in the journeys step list (JnManagerRefund: confirm, reason box RrNote, OK RrOk), not here; l195 and earlier counted it as NOTEXECUTED here although the journeys covered it (counting change disclosed in l196)'
   BizSeedCustomer
+  BizInteractionPrompt
   Say 'INFO business: the reprint text window is driven in the journeys list (JnReprint) after the cashier sale'
-  Say 'NOTEXECUTED business: interaction prompt at sale is not driven in this list (the QR is checked in the phone monitor block)'; $script:notexec++
+  Say 'INFO business: the interaction prompt at sale is driven by BizInteractionPrompt (QR is checked in the phone monitor block)'
 }
