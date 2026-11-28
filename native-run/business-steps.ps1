@@ -195,7 +195,14 @@ function BusinessSteps(){
     if((BizSetText $w 'BtIntA' 'syn-ingredient-a') -and (BizSetText $w 'BtIntB' 'syn-ingredient-b') -and (BizInvoke $w 'BtIntSave')){ $im=BizMsg $w; Say "DIAG business: interaction save message [$im]"; Check ($im -like '*تم حفظ التفاعل*') 'business: saving an interaction rule shows the saved message'; Shot 'biz-interaction-saved'; [void](BizInvoke $w 'BtIntRemove'); Say "DIAG business: interaction rule removed, message [$(BizMsg $w)]" }
     else { Say 'NOTEXECUTED business interaction rule save: controls not found (owner only)'; $script:notexec++ }
   } else { Say 'NOTEXECUTED business interaction rule save: the interactions tab was not found'; $script:notexec++ }
-  Say 'NOTEXECUTED business: transfer note (needs a batch and a destination)'; $script:notexec++
+  # l203: transfer note (paper note only, stock unchanged): first batch, 1 unit, a synthetic destination and a note
+  if(BizSelectTab $w 'تحويل مخزون'){
+    $tp=BizPickCombo $w 'BtTransferBatch' ''
+    if($tp -and (BizSetText $w 'BtTransferUnits' '1') -and (BizSetText $w 'BtTransferTo' 'Synthetic Branch') -and (BizSetText $w 'BtTransferNote' 'Synthetic transfer note') -and (BizInvoke $w 'BtTransferCreate')){
+      $tm=BizMsg $w; $tt=''; $te=ById $w 'BtTransferText' 3; if($te){ try{ $tt=[string]$te.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value }catch{} }
+      Say "DIAG business: transfer note message [$tm] batch [$tp] text length=$($tt.Length)"; Check ($tm -like '*تم إنشاء إذن التحويل*') 'business: a transfer note is created and shows the destination (stock unchanged)'; Shot 'biz-transfer-note'
+    } else { Say "NOTEXECUTED business transfer note: batch pick=[$tp] or controls missing"; $script:notexec++ }
+  } else { Say 'NOTEXECUTED business transfer note: the transfer tab was not found'; $script:notexec++ }
   Say 'EXCLUDED-SCOPE business: CSV exports open a Windows save-file dialog and write outside the app; not driven'
 
   Shot 'biz-2-after'; BizCloseWin $w 'أدوات الأعمال'
