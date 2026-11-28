@@ -56,7 +56,7 @@ function JnCreateUser($name,$pw,$roleWord){
       if($null -ne $steps){ try{ $nr.SetFocus(); Start-Sleep -Milliseconds 400; for($k=0;$k -lt $steps;$k++){ [System.Windows.Forms.SendKeys]::SendWait('{DOWN}'); Start-Sleep -Milliseconds 300 }; $picked=$true; Say "DIAG journeys: role [$roleWord] chosen by $steps Down key(s) (popup items found: $(@($li).Count))" }catch{ Say "DIAG journeys: keyboard role pick failed: $($_.Exception.Message)" } } }
     Say "DIAG journeys: role item [$roleWord] picked=$picked; box now shows [$([string]$nr.Current.Name)]"
     if(-not $picked){ Say "NOTEXECUTED journeys: role $roleWord could not be chosen for $name"; return $false }
-    # l196: verify the box really holds the wanted role before creating the user (l194: inventory1 box read [] and the user looked like a manager)
+    # l195: verify the box really holds the wanted role before creating the user (l194: inventory1 box read [] and the user looked like a manager)
     $rd={ $t=''; try{ $t=[string]$nr.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value }catch{}; if(-not $t){ try{ $g=@($nr.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()); if($g.Count -gt 0){ $t=[string]$g[0].Current.Name } }catch{} }; if(-not $t){ $t=[string]$nr.Current.Name }; $t }
     $now=& $rd; Say "DIAG journeys: role box reads [$now] (want *$roleWord*)"
     if($now -notlike "*$roleWord*"){
