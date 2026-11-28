@@ -1,3 +1,19 @@
+function JnReprint(){
+  # l196: the reprint text window, driven right after the cashier sale (this.receipt is only set in the session that made the sale)
+  $rb=Pick 'ReprintButton' 4; if(-not $rb){ Say 'NOTEXECUTED journeys reprint: ReprintButton not found'; $script:notexec++; return }
+  $en=$false; try{ $en=[bool]$rb.Current.IsEnabled }catch{}; if(-not $en){ Say 'NOTEXECUTED journeys reprint: ReprintButton is disabled (no completed sale in this session)'; $script:notexec++; return }
+  try{ $rb.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke() }catch{ Say "FAIL journeys reprint: invoke: $($_.Exception.Message)"; $script:fails++; return }
+  Start-Sleep 2; $rw=$null; foreach($w in @(AllWinsDeep)){ if([string]$w.Current.Name -like '*نسخة مكررة*'){ $rw=$w } }
+  if(-not $rw){ $md=FindModal; if($md){ Say "DIAG journeys reprint: a dialog opened instead [$($md.Current.Name)] texts=[$((@(WinBoxStatics $md)) -join ' / ')]"; [void](ModalDismiss 'jn-reprint-other') }; Say 'NOTEXECUTED journeys reprint: the reprint window did not open (see DIAG)'; $script:notexec++; return }
+  Check ($true) 'journeys reprint: the duplicate-receipt window opens'
+  $tb=$rw.FindFirst([System.Windows.Automation.TreeScope]::Descendants,(New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty,'ReprintText')))
+  $txt=''; if($tb){ try{ $txt=[string]$tb.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value }catch{} }
+  Say "DIAG journeys reprint: text length=$($txt.Length)"
+  Check ($txt.Length -gt 20 -and $txt -match '\d') 'journeys reprint: the window shows a non-empty receipt text with numbers'
+  Shot 'jn-cashier-reprint'
+  try{ $rw.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).Close() }catch{ Say "INFO journeys reprint: close failed: $($_.Exception.Message)" }
+  Start-Sleep 1; [void](JnLeftoverModal 'cashier-after-reprint')
+}
 # l170 role journeys on real Windows: the owner creates a manager and an inventory user (the cashier already exists from the roles block), then each role logs in,
 # visits every page on its rail, a screenshot is taken per page, and the UIA layout audit runs per page. Pages are VISITED, not worked through: no sale, refund or stock edit is driven here.
 # l171 adds: cashier opens a shift, sells the first stock line, checks the refund button, closes the shift; the manager then refunds that sale through the reason dialog.
@@ -40,7 +56,7 @@ function JnCreateUser($name,$pw,$roleWord){
       if($null -ne $steps){ try{ $nr.SetFocus(); Start-Sleep -Milliseconds 400; for($k=0;$k -lt $steps;$k++){ [System.Windows.Forms.SendKeys]::SendWait('{DOWN}'); Start-Sleep -Milliseconds 300 }; $picked=$true; Say "DIAG journeys: role [$roleWord] chosen by $steps Down key(s) (popup items found: $(@($li).Count))" }catch{ Say "DIAG journeys: keyboard role pick failed: $($_.Exception.Message)" } } }
     Say "DIAG journeys: role item [$roleWord] picked=$picked; box now shows [$([string]$nr.Current.Name)]"
     if(-not $picked){ Say "NOTEXECUTED journeys: role $roleWord could not be chosen for $name"; return $false }
-    # l195: verify the box really holds the wanted role before creating the user (l195: inventory1 box read [] and the user looked like a manager)
+    # l196: verify the box really holds the wanted role before creating the user (l194: inventory1 box read [] and the user looked like a manager)
     $rd={ $t=''; try{ $t=[string]$nr.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern).Current.Value }catch{}; if(-not $t){ try{ $g=@($nr.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern).Current.GetSelection()); if($g.Count -gt 0){ $t=[string]$g[0].Current.Name } }catch{} }; if(-not $t){ $t=[string]$nr.Current.Name }; $t }
     $now=& $rd; Say "DIAG journeys: role box reads [$now] (want *$roleWord*)"
     if($now -notlike "*$roleWord*"){
@@ -96,6 +112,7 @@ function JnCashierFlow(){
         $ctrl=$null; foreach($w in @(TopWins $p.Id)){ if($w.Current.Name -like '*الدواء المراقب*'){ $ctrl=$w } }
         if($ctrl){ Say 'INFO journeys: the chosen line is a controlled drug and its register dialog opened; the sale was not completed by this journey'; Shot 'jn-cashier-controlled-dialog'; $script:notexec++ }
         else { [void](JnLeftoverModal 'cashier-after-sale'); $c2=@(Rows 'CartGrid').Count; Shot 'jn-cashier-after-sale'; Say "DIAG journeys: cart rows after sale = $c2; last sale [$(ValTxt 'LastSaleLabel')]; status [$(ValTxt 'StatusLabel')]"; Check ($c2 -eq 0) 'journeys cashier: after paying the cart is empty (sale saved)' } } } }
+  try{ JnReprint }catch{ Say "FAIL journeys reprint: $($_.Exception.Message) (line $($_.InvocationInfo.ScriptLineNumber))"; $script:fails++ }
   if(NavTo @('المبيعات والورديات','Sales and shifts') 'jn-cashier-reports' 'SalesGrid'){ $rf=ById $main 'RefundButton' 3; $vis=$false; if($rf){ try{ $vis=(-not $rf.Current.IsOffscreen) -and $rf.Current.IsEnabled }catch{} }; Say "DIAG journeys: cashier sees an enabled RefundButton = $vis"; Shot 'jn-cashier-reports-refund'
     if($vis){ Say 'INFO journeys: the refund button is visible to the cashier; Core refuses the action for a cashier (Refund is Owner and Manager only), not clicked here'; $script:notexec++ } else { Check $true 'journeys cashier: the refund button is not offered to a cashier' } }
   if(NavTo @('البيع','Sales') 'jn-cashier-sell2' 'StockGrid'){

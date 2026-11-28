@@ -30,7 +30,8 @@ function LoyaltySteps(){
     Start-Sleep -Milliseconds 800; $b0=LoyText $w 'LoyBalance'; Say "DIAG loyalty balance after choosing a customer: [$b0]"; Check ($b0 -like '*الرصيد*') 'loyalty: choosing a customer shows the balance'
     $aw=ById $w 'LoyAwardLast' 3
     if($aw -and $aw.Current.IsEnabled){ [void](LoyClick $w 'LoyAwardLast'); $m1=LoyText $w 'LoyMessage'; $b1=LoyText $w 'LoyBalance'; Say "DIAG loyalty award message=[$m1] balance=[$b1]"; Check ($m1 -like '*نقطة*' -or $m1 -like '*لا نقاط جديدة*') 'loyalty: awarding for the last sale answers with points or "nothing new"' }
-    else { Say 'NOTEXECUTED loyalty: award button disabled (no sale was made in this program instance)'; $script:notexec++ }
+    elseif($env:OFAG_JOURNEYS -eq '1' -and -not $script:loyAfterSale){ Say 'INFO loyalty: award button disabled in the first pass; it is tried again in the second pass after the journeys have made a sale (not counted as NOTEXECUTED here)' }
+    else { Say 'NOTEXECUTED loyalty: award button disabled (no sale was made in this program instance, or the journey sale was a controlled drug)'; $script:notexec++ }
     [void](LoyVal $w 'LoyRedeemPoints' '1'); [void](LoyClick $w 'LoyRedeem'); $m2=LoyText $w 'LoyMessage'; Say "DIAG loyalty redeem message=[$m2] balance=[$(LoyText $w 'LoyBalance')]"
     Check ($m2 -like '*اسمح للعميل بخصم*' -or $m2 -like '*لا يكفي*') 'loyalty: redeeming one point gives the discount amount, or says the balance is not enough'
   }

@@ -1,6 +1,6 @@
 function ProcById($pw,$id){ try{ return $pw.FindFirst([System.Windows.Automation.TreeScope]::Descendants,(New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty,$id))) }catch{ return $null } }
 function ProcBtn($pw,$like){ try{ foreach($x in @($pw.FindAll([System.Windows.Automation.TreeScope]::Descendants,(New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::Button))))){ if([string]$x.Current.Name -like $like){ return $x } } }catch{}; return $null }
-# l195: the proof that the procurement heading text still has its hamza and tanween marks (the screenshots crop that heading at the window top). Reads the real UIA Name.
+# l196: the proof that the procurement heading text still has its hamza and tanween marks (the screenshots crop that heading at the window top). Reads the real UIA Name.
 function ProcHeadingCheck($pw){ try{ foreach($t in @($pw.FindAll([System.Windows.Automation.TreeScope]::Descendants,(New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty,[System.Windows.Automation.ControlType]::Text))))){ $n=[string]$t.Current.Name; if($n -like '3.*'){ $ok=($n.Contains([string][char]0x064B) -and $n.Contains([string][char]0x0623)); Check $ok "procurement heading keeps its Arabic marks (tanween U+064B and hamza U+0623 present in the UIA name)"; if(-not $ok){ Say "DIAG heading name = [$n]" }; return } }; Say 'NOTEXECUTED procurement heading mark check: heading text element not found'; $script:notexec++ }catch{ Say "INFO procurement heading check failed: $($_.Exception.Message)" } }
 function ProcSeed($pw){
   try{
@@ -120,5 +120,7 @@ function BusinessSteps(){
   if($cw){ Check ($true) 'business: the customer-for-sale window opens'; Shot 'biz-4-customer'; BizCloseWin $cw 'عميل للبيع' }
   $qw=BizOpen 'QuickKeysButton' 'مفاتيح سريعة'
   if($qw){ Check ($true) 'business: the quick keys window opens'; Shot 'biz-5-quickkeys'; BizCloseWin $qw 'مفاتيح سريعة' }
-  Say 'NOTEXECUTED business: refund reason dialog, QR in Operations, interaction prompt at sale, reprint text window are not driven in this list'; $script:notexec++
+  Say 'INFO business: the refund reason dialog is driven in the journeys step list (JnManagerRefund: confirm, reason box RrNote, OK RrOk), not here; l196 and earlier counted it as NOTEXECUTED here although the journeys covered it (counting change disclosed in l196)'
+  Say 'INFO business: the reprint text window is driven in the journeys list (JnReprint) after the cashier sale'
+  Say 'NOTEXECUTED business: QR in Operations, interaction prompt at sale are not driven in this list'; $script:notexec++
 }
