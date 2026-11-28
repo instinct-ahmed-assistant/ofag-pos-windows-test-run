@@ -1,7 +1,7 @@
-0b5cdeaa3e40e1f20fb9c92852872f132cda861d0325b1e4d51240f2f4392405  ./.github/workflows/trial-l187-native.yml
-90fa105c60a4c9dddf10af72d5647de50240999878e18fb7f306f7d2e1da1bf5  ./POS-l187-TRIAL-candidate-win-x64.zip
+bb276de6f33021ef53353d92aaeab2844eca4773d8c32c7cbfb797d5bec8ada9  ./.github/workflows/trial-l188-native.yml
+6d078695d9f72210971c678a86cbe836a7a6704b179d79fde18b2c812dfdd629  ./POS-l188-TRIAL-candidate-win-x64.zip
 edec1715487b544b1946bc5d5de5ad7c2086b3c0ff5946db758b5cab0e5959f7  ./README.md
-da884b3aa9a32ec1516e8edce84a17cf2f2e5d831b08e90152747530f1cf11ad  ./native-run/business-steps.ps1
+c2b458735908ebea1fe5dc8c7f48eeb72e8e26ee7033da54e568dab9e2ca5610  ./native-run/business-steps.ps1
 6ed42934ffc19617ac69a9698fea0372bc86fc8ed9ba846075de49190b4ce146  ./native-run/install-smoke.ps1
 3c019c010ec1e94290e8f246978b6cc4def55d54a24c2b209a77918ca1e3a3f0  ./native-run/journeys-steps.ps1
 5e2f8f82e5ee5ddb8db0ccaf9a52144e2d20922e18e3773635d2294a52b0565b  ./native-run/l116-expect.ps1
@@ -13,7 +13,7 @@ b923106492b26d9bf21629afd75990114cd49afd75c4c5510b49f70504d9ec96  ./native-run/p
 e6240526ec65c841b44bc3ff8680c55434a12cddf2708060aa46b905da1e8e53  ./native-run/seedfresh/SeedFresh.exe
 f92e0d736b4e847b170f6f1129ebdde3d36a21f83d9c222c35d4caa39d47cdd1  ./native-run/selfcontained-smoke.ps1
 aa65929f65a3f5c263d7f6f344af062635cced3ee69ed2d0bedde82e7bdba3bd  ./native-run/snap3/DbSnap.exe
-eb6b1f2cd21f0bc026043162cb99e4904b4fc2a526260494060bc0394bb7d932  ./native-run/trial-l118-fresh.ps1
+54ecaa1c36c537046eeac98fb5151e4b95f08caaee66331606523c12bf4280ed  ./native-run/trial-l118-fresh.ps1
 9f5e29f5e8e884e1456ba7959156427483b0131bea3fc09996ffc74910689d00  ./native-run/winalias-prelude.ps1
 6b3b7f8945d2d77fc50226b80acc7260e57cef2af1de52976cc3f454ba69912d  ./native-run/ximp-expect.ps1
 f5ecb5fd1a247813a24f966c5afbd1d22572b9e02eef1a965e11cd4b5d8e8ad6  ./native-run/ximp-fixtures/FIXTURE-SHA256SUMS.txt
