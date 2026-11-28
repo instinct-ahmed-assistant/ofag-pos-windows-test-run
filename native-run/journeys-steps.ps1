@@ -4,6 +4,7 @@ function JnCustomerAfterSale(){
     $b=Pick 'SaleCustomerButton' 4; if(-not $b){ return }
     $b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep 2
     $w=WinByTitle 'عميل للبيع' 10; if(-not $w){ Say 'NOTEXECUTED journeys cashier customer after sale: window did not open'; $script:notexec++; return }
+    try{ $cm=$w.FindFirst([System.Windows.Automation.TreeScope]::Descendants,(New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty,'CsMessage'))); if($cm){ Say "DIAG journeys cashier customer: window message [$([string]$cm.Current.Name)]" } }catch{}
     $pn=BizPickCombo $w 'CsCustomer' '*Synthetic Customer*'; Start-Sleep 1
     $pr=ById $w 'CsProfile' 3; $pt=if($pr){ [string]$pr.Current.Name } else { '(missing)' }; Say "DIAG journeys cashier customer after sale: profile [$pt]"
     $pg=ById $w 'CsPurchases' 3; $cnt=-1; if($pg){ try{ $cnt=[int]$pg.GetCurrentPattern([System.Windows.Automation.GridPattern]::Pattern).Current.RowCount }catch{} }; Say "DIAG journeys cashier customer after sale: purchase rows=$cnt"
@@ -18,6 +19,7 @@ function JnCashierCustomer(){
     $b=Pick 'SaleCustomerButton' 4; if(-not $b){ Say 'NOTEXECUTED journeys cashier customer: SaleCustomerButton not found'; $script:notexec++; return }
     $b.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern).Invoke(); Start-Sleep 2
     $w=WinByTitle 'عميل للبيع' 10; if(-not $w){ Say 'NOTEXECUTED journeys cashier customer: the customer window did not open'; $script:notexec++; return }
+try{ $cm=$w.FindFirst([System.Windows.Automation.TreeScope]::Descendants,(New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty,'CsMessage'))); if($cm){ Say "DIAG journeys cashier customer: window message [$([string]$cm.Current.Name)]" } }catch{}
     $pn=BizPickCombo $w 'CsCustomer' '*Synthetic Customer*'; if(-not $pn){ $pn=BizPickCombo $w 'CsCustomer' '' }
     Say "DIAG journeys cashier customer: chosen [$pn]"
     if($pn -and (BizInvoke $w 'CsUseNext')){ Start-Sleep 1; [void](JnLeftoverModal 'cashier-customer'); $lb=Pick 'SaleCustomerLabel' 3; $lt=if($lb){ [string]$lb.Current.Name } else { '(missing)' }; Say "DIAG journeys cashier customer: label [$lt]"; Check ($lt -like '*البيع التالي للعميل*') 'journeys cashier: the next sale is attached to the chosen customer (label shown)'; $script:jnCustomerAttached=$true; Shot 'jn-cashier-customer-attached' }
