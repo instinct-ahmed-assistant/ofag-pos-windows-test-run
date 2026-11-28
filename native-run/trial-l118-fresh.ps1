@@ -196,6 +196,7 @@ function NavTo($labels,$tag,$pageId,$topId=$null){
   Say "INFO $tag Space did not bring the page up; one real mouse click at the rail item centre"; Shot "dlg-$tag-after-space"
   try{ if(-not (SafeRailClickOk $rb $tag)){ throw "mouse click skipped: target not safely inside the rail viewport" }; $b=$rb.Current.BoundingRectangle; $x=[int]($b.X+$b.Width/2); $y=[int]($b.Y+$b.Height/2); [void][M.U]::SetCursorPos($x,$y); Start-Sleep -Milliseconds 300; [M.U]::mouse_event(2,0,0,0,[UIntPtr]::Zero); [M.U]::mouse_event(4,0,0,0,[UIntPtr]::Zero); Start-Sleep -Milliseconds 1800; Neutral }catch{ Say "FAIL $tag mouse click failed: $($_.Exception.Message)" }
   if(PageUp $pageId $topId $rb){ Say "TAB $tag via one mouse click; page element $pageId visible"; return $true }
+  for($wr=1;$wr -le 10;$wr++){ Start-Sleep -Seconds 1; ReanchorMain "wait-retry $wr $tag"; if(PageUp $pageId $topId $rb){ Say "TAB $tag page element $pageId visible after wait-retry $wr (about $wr s late)"; return $true } }
   Say "FAIL $tag page element $pageId not visible after Space and one click"; Shot "dlg-$tag-not-navigated"; DumpAll "dlg-$tag-not-navigated"; PointScan $tag; $script:fails++; Halt "$tag navigation"; return $false }
 
 function Latin($t){ $x=[string]$t; $ar='٠١٢٣٤٥٦٧٨٩'; for($i=0;$i -lt 10;$i++){ $x=$x.Replace([string]$ar[$i],[string]$i) }; return $x.Replace('٫','.').Replace('٬','') }
